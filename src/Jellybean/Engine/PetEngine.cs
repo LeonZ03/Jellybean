@@ -140,9 +140,10 @@ public sealed class PetEngine
         if (_support is not { } support) return;
         if (support.Window != 0)
         {
-            if (!_surfaces.TryGetWindowOrigin(support.Window, out var origin)) { Drop(); return; }
+            if (!_surfaces.TryGetWindowOrigin(support.Window, out var origin)) { _surfaces.Refresh(); Drop(); return; }
             var dx = origin.X - _windowOrigin.X;
             var dy = origin.Y - _windowOrigin.Y;
+            if (Math.Abs(dx) > .5 || Math.Abs(dy) > .5) _surfaces.Refresh();
             CenterX += dx;
             FeetY += dy;
             if (State == PetState.Pounce)

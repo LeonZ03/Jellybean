@@ -23,7 +23,7 @@ public partial class App : Application
             MessageBox.Show("糖豆遇到了一点问题，请重新打开。\n错误详情已保存到：\n"+UserSettings.DataDirectory,"糖豆",MessageBoxButton.OK,MessageBoxImage.Information);
             error.Handled=true; Shutdown(1);
         };
-        _session=new DesktopSession(_showSignal,e.Args.Contains("--inspect"));
+        _session=new DesktopSession(_showSignal);
         if(e.Args.Contains("--settings")) _session.OpenSettings();
     }
 

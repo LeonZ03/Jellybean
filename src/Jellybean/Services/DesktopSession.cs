@@ -26,14 +26,13 @@ public sealed class DesktopSession : IDisposable
     private DateTime? _intervalDue, _dailyDue;
     private bool _pendingReminder;
 
-    public DesktopSession(EventWaitHandle showSignal,bool inspect=false)
+    public DesktopSession(EventWaitHandle showSignal)
     {
         _showSignal=showSignal;
         Settings=UserSettings.Load();
-        if(inspect) Settings.HideInFullscreen=false;
         _surfaces=new SurfaceProvider(_dpi) { MinimumClearance=136*Settings.Scale };
         Engine=new PetEngine(_surfaces,Settings);
-        _pet=new PetWindow(Engine,Settings,_sprites,_dpi,inspect);
+        _pet=new PetWindow(Engine,Settings,_sprites,_dpi);
         _effects=new EffectWindow(_dpi); _toy=new EffectWindow(_dpi,true);
         _tray=new TrayService(this);
         _pet.MenuRequested+=_tray.ShowMenu;

@@ -35,13 +35,13 @@ public sealed class PetWindow : Window
     public event Action? FrameUpdated;
     public event Action<double>? ScaleRequested;
 
-    public PetWindow(PetEngine engine, UserSettings settings, SpriteCatalog sprites, double dpi, bool inspect = false)
+    public PetWindow(PetEngine engine, UserSettings settings, SpriteCatalog sprites, double dpi)
     {
         _engine = engine; _settings = settings; _sprites = sprites; _dpi = dpi;
         Title = "糖豆 Jellybean";
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
         AllowsTransparency = true; Background = null;
-        ShowInTaskbar = inspect; ShowActivated = false; Focusable = false;
+        ShowInTaskbar = false; ShowActivated = false; Focusable = false;
         Topmost = settings.Topmost;
         Width = SpriteCatalog.Width * settings.Scale; Height = SpriteCatalog.Height * settings.Scale;
         Content = _root; _root.Children.Add(_image);
@@ -54,7 +54,6 @@ public sealed class PetWindow : Window
         {
             _handle = new WindowInteropHelper(this).Handle;
             Win32.ConfigureOverlay(_handle);
-            if (inspect) Win32.SetWindowLong(_handle,Win32.GWL_EXSTYLE,Win32.GetWindowLong(_handle,Win32.GWL_EXSTYLE)&~Win32.WS_EX_TOOLWINDOW);
             HwndSource.FromHwnd(_handle).AddHook(WindowProc);
             SyncScale(); Render();
         };
