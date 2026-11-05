@@ -1,0 +1,53 @@
+<Window x:Class="Jellybean.UI.SettingsWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="糖豆 · 设置" Width="440" Height="625" MinHeight="560"
+ ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen" Background="#FFF9F1">
+ <ScrollViewer VerticalScrollBarVisibility="Auto">
+  <StackPanel Margin="28,22,28,24">
+   <Grid Margin="0,0,0,18">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="74"/><ColumnDefinition/></Grid.ColumnDefinitions>
+    <Image x:Name="Portrait" Width="68" Height="88" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0,0,0">
+     <TextBlock Text="糖豆" FontSize="25" FontWeight="SemiBold" />
+     <TextBlock Text="陪你待一会儿。" Foreground="{StaticResource Muted}" Margin="0,7,0,0" />
+    </StackPanel>
+   </Grid>
+   <Grid Margin="0,0,0,8">
+    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="55"/></Grid.ColumnDefinitions>
+    <TextBlock Text="糖豆的大小" FontWeight="SemiBold"/>
+    <TextBlock x:Name="SizeLabel" Grid.Column="1" HorizontalAlignment="Right" Foreground="{StaticResource Muted}" />
+   </Grid>
+   <Slider x:Name="SizeSlider" Minimum="70" Maximum="180" TickFrequency="10" IsSnapToTickEnabled="True" ValueChanged="PetSizeChanged" AutomationProperties.Name="糖豆的大小" />
+   <CheckBox x:Name="Autonomous" Content="自己走走、打盹和伸懒腰" Margin="0,17,0,5" />
+   <CheckBox x:Name="AutoJump" Content="偶尔跳到附近窗口" />
+   <CheckBox x:Name="AlwaysTop" Content="糖豆显示在其他窗口上方" />
+   <CheckBox x:Name="Fullscreen" Content="全屏游戏或看视频时自动收起" />
+   <CheckBox x:Name="StartAtLogin" Content="登录 Windows 时启动糖豆" />
+   <CheckBox x:Name="Silent" Content="保持安静（提醒也不播放声音）" />
+   <Border Height="1" Background="#E9DDD0" Margin="0,15,0,18" />
+   <TextBlock Text="轻提醒" FontWeight="SemiBold" Margin="0,0,0,10" />
+   <Grid Margin="0,0,0,11">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition/></Grid.ColumnDefinitions>
+    <TextBlock Text="休息间隔" VerticalAlignment="Center" />
+    <ComboBox x:Name="ReminderInterval" Grid.Column="1" MinHeight="29" AutomationProperties.Name="休息提醒间隔">
+     <ComboBoxItem Content="关闭" Tag="0"/><ComboBoxItem Content="每 15 分钟" Tag="15"/>
+     <ComboBoxItem Content="每 30 分钟" Tag="30"/><ComboBoxItem Content="每 60 分钟" Tag="60"/>
+    </ComboBox>
+   </Grid>
+   <Grid>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition/></Grid.ColumnDefinitions>
+    <TextBlock Text="每天固定时间" VerticalAlignment="Center" />
+    <TextBox x:Name="DailyTime" Grid.Column="1" Padding="7,5" MaxLength="5" AutomationProperties.Name="每天提醒时间，24小时制" />
+   </Grid>
+   <TextBlock Text="固定时间填 15:30 这样的格式，留空即关闭。" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,7,0,0" />
+   <TextBlock x:Name="Error" Foreground="#A43B36" Margin="0,8,0,0" TextWrapping="Wrap" />
+   <Grid Margin="0,12,0,0">
+    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+    <Button Content="预览提醒" Click="PreviewClicked" HorizontalAlignment="Left" Background="#FFFFFF" BorderBrush="#D9C9BA" />
+    <Button Grid.Column="1" Content="保存" IsDefault="True" Click="SaveClicked" HorizontalAlignment="Right" Background="{StaticResource Peach}" BorderBrush="#D9BBA5" />
+   </Grid>
+   <TextBlock Text="单击摸摸 · 双击逗猫 · 拖动换位置 · 滚轮调大小" TextWrapping="Wrap" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,18,0,0" />
+  </StackPanel>
+ </ScrollViewer>
+</Window>
