@@ -22,7 +22,7 @@ if ($Package) {
     $folder = Join-Path $projectRoot "artifacts/Jellybean-$version"
     & $dotnet publish src/Jellybean/Jellybean.csproj -c Release -r win-x64 --self-contained true -o $folder --nologo
     if ($LASTEXITCODE -ne 0) { throw '发布失败。' }
-    Copy-Item -LiteralPath README.md -Destination (Join-Path $folder '使用说明.md')
+    Copy-Item -LiteralPath packaging/使用说明.md -Destination (Join-Path $folder '使用说明.md')
     $archive = Join-Path $projectRoot "artifacts/Jellybean-$version-win-x64.zip"
     Compress-Archive -Path "$folder/*" -DestinationPath $archive -Force
     Get-Item $archive | Select-Object FullName,Length

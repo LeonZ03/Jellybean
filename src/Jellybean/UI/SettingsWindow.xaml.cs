@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using Jellybean.Engine;
 using Jellybean.Services;
 
@@ -15,7 +16,7 @@ public partial class SettingsWindow : Window
     public SettingsWindow(UserSettings settings,SpriteCatalog sprites)
     {
         _settings=settings; InitializeComponent();
-        Portrait.Source=sprites.Frame("front",0);
+        Portrait.Source=new CroppedBitmap(sprites.Frame("front",0),new Int32Rect(90,34,60,78));
         SizeSlider.Value=settings.Scale*100;
         Autonomous.IsChecked=settings.Autonomous; AutoJump.IsChecked=settings.AutoJump;
         AlwaysTop.IsChecked=settings.Topmost; Fullscreen.IsChecked=settings.HideInFullscreen;

@@ -10,7 +10,7 @@ using System.Windows.Media.Imaging;
 
 internal static class Program
 {
-    private const int Width = 192, Height = 176, Foot = 164, Anchor = 96;
+    private const int Width = 240, Height = 176, Foot = 164, Anchor = 120;
     private static readonly Dictionary<string, object> Clips = new();
     private static string Root = "", Output = "";
 
@@ -50,7 +50,7 @@ internal static class Program
         {
             graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
             // Crop the face from the front view for a readable tray icon.
-            graphics.DrawImage(bitmap,new System.Drawing.Rectangle(0,0,64,64),new System.Drawing.Rectangle(68,38,56,66),System.Drawing.GraphicsUnit.Pixel);
+            graphics.DrawImage(bitmap,new System.Drawing.Rectangle(0,0,64,64),new System.Drawing.Rectangle(92,38,56,66),System.Drawing.GraphicsUnit.Pixel);
         }
         var handle = small.GetHicon();
         using (var icon = System.Drawing.Icon.FromHandle(handle))

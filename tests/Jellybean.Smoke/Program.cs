@@ -27,6 +27,7 @@ internal static class Program
         Window? fixture=null;
         try
         {
+            if(args.Contains("--render-only")) { ExportPreview(new SpriteCatalog(),new UserSettings()); Console.WriteLine("Preview rendered."); return 0; }
             var platforms=new[]{new Surface(0,300,180),new Surface(0,300,600)};
             Check(Platforms.TryLand(platforms,100,100,650,out var landing)&&landing==180,"swept fall lands on highest crossed edge");
             Check(!Platforms.TryLand(platforms,400,100,650,out _),"fall outside a window does not snap to it");
@@ -74,13 +75,13 @@ internal static class Program
             foreach(var clip in new[]{"front","walk-left","walk-right","pounce-left","pounce-right","doze","pet","perch","stretch","rear"})
             {
                 var frame=sprites.Frame(clip,.8);
-                Check(frame.PixelWidth==192 && frame.PixelHeight==176 && frame.IsFrozen,$"{clip} atlas decodes at runtime size");
+                Check(frame.PixelWidth==SpriteCatalog.Width && frame.PixelHeight==SpriteCatalog.Height && frame.IsFrozen,$"{clip} atlas decodes at runtime size");
                 var converted=new FormatConvertedBitmap(frame,PixelFormats.Bgra32,null,0);
-                var pixels=new byte[192*176*4]; converted.CopyPixels(pixels,192*4,0);
-                Check(pixels[3]==0 && pixels[(192*176-1)*4+3]==0,$"{clip} corners are truly transparent");
+                var pixels=new byte[SpriteCatalog.Width*SpriteCatalog.Height*4]; converted.CopyPixels(pixels,SpriteCatalog.Width*4,0);
+                Check(pixels[3]==0 && pixels[^1]==0,$"{clip} corners are truly transparent");
             }
             engine.Remind(); Check(engine.Bubble is not null && engine.State==PetState.Stretch,"reminder combines a stretch with a quiet speech bubble");
-            ExportPreview(sprites,settings);
+            ExportPreview(sprites,new UserSettings());
             File.WriteAllText(Path.Combine(Output,"smoke-results.json"),JsonSerializer.Serialize(new{passed=Passed.Count,checks=Passed},new JsonSerializerOptions{WriteIndented=true}));
             Console.WriteLine($"PASS: {Passed.Count} checks; preview exported to {Output}");
             return 0;
@@ -119,16 +120,15 @@ internal static class Program
                 dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(255,250,242)),null,new Rect(x,y,370,245),14,14);
                 DrawText(dc,labels[i],x+18,y+14,14);
                 dc.DrawLine(new Pen(new SolidColorBrush(Color.FromRgb(213,200,184)),1),new Point(x+15,y+228),new Point(x+355,y+228));
-                dc.DrawImage(sprites.Frame(clips[i],i==4?1.2:.5),new Rect(x+30,y-34,307.2,281.6));
+                dc.DrawImage(sprites.Frame(clips[i],i==4?1.2:.5),new Rect(x-7,y-34,384,281.6));
             }
         }
         Save(visual,1200,650,"first-build-preview.png");
         var window=new SettingsWindow(settings,sprites);
         var content=(FrameworkElement)window.Content;
-        content.Measure(new Size(424,586)); content.Arrange(new Rect(0,0,424,586)); content.UpdateLayout();
-        var panel=new DrawingVisual(); using(var dc=panel.RenderOpen())
-        { dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(255,249,241)),null,new Rect(0,0,424,586)); dc.DrawRectangle(new VisualBrush(content),null,new Rect(0,0,424,586)); }
-        Save(panel,424,586,"settings-preview.png");
+        content.Measure(new Size(424,641)); content.Arrange(new Rect(0,0,424,641)); content.UpdateLayout();
+        ((System.Windows.Controls.ScrollViewer)content).Background=new SolidColorBrush(Color.FromRgb(255,249,241));
+        Save(content,424,641,"settings-preview.png");
         window.Close();
     }
 
@@ -139,7 +139,10 @@ internal static class Program
 
     private static void Save(Visual visual,int width,int height,string name)
     {
-        var bitmap=new RenderTargetBitmap(width,height,96,96,PixelFormats.Pbgra32); bitmap.Render(visual);
+        var bitmap=new RenderTargetBitmap(width,height,96,96,PixelFormats.Pbgra32);
+        var background=new DrawingVisual();
+        using(var dc=background.RenderOpen()) dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(255,249,241)),null,new Rect(0,0,width,height));
+        bitmap.Render(background); bitmap.Render(visual);
         var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream=File.Create(Path.Combine(Output,name)); encoder.Save(stream);
     }

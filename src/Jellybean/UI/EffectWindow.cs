@@ -30,7 +30,8 @@ public sealed class EffectWindow : Window
         if(!IsVisible) Show();
         Topmost=settings.Topmost;
         var scale=_dpi/VisualTreeHelper.GetDpi(this).DpiScaleX;
-        _canvas.LayoutTransform=new ScaleTransform(scale,scale);
+        if (_canvas.LayoutTransform is not ScaleTransform old || Math.Abs(old.ScaleX-scale)>.0001)
+            _canvas.LayoutTransform=new ScaleTransform(scale,scale);
         _canvas.Text=engine.Bubble; _canvas.Hearts=engine.Hearts; _canvas.Age=engine.Age;
         var x=_canvas.Toy?engine.ToyPosition.X-24:engine.CenterX-135;
         var y=_canvas.Toy?engine.ToyPosition.Y-52:engine.FeetY-engine.BodyHeight-95;

@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using System.Windows.Media;
 
 namespace Jellybean.Engine;
 
@@ -13,7 +14,8 @@ public sealed class SpriteCatalog
     }
 
     private readonly Dictionary<string, Clip> _clips = new();
-    public const int Width = 192, Height = 176, Anchor = 96, Foot = 164;
+    private readonly Dictionary<BitmapSource, byte[]> _hitMasks = new();
+    public const int Width = 240, Height = 176, Anchor = 120, Foot = 164;
 
     public SpriteCatalog()
     {
@@ -50,5 +52,17 @@ public sealed class SpriteCatalog
             milliseconds -= clip.Durations[i];
         }
         return clip.Frames[^1];
+    }
+
+    public byte[] HitMask(BitmapSource frame)
+    {
+        if (_hitMasks.TryGetValue(frame,out var mask)) return mask;
+        var bgra = new FormatConvertedBitmap(frame,PixelFormats.Bgra32,null,0);
+        var bytes = new byte[Width*Height*4];
+        bgra.CopyPixels(bytes,Width*4,0);
+        mask = new byte[Width*Height];
+        for(var i=0;i<mask.Length;i++) mask[i]=bytes[i*4+3];
+        _hitMasks.Add(frame,mask);
+        return mask;
     }
 }

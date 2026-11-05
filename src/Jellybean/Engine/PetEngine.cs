@@ -158,6 +158,7 @@ public sealed class PetEngine
             var visible = _surfaces.Surfaces.FirstOrDefault(s => s.Window == support.Window && s.ContainsX(CenterX));
             if (visible.Width > 0)
                 _support = visible with { Top = origin.Y };
+            else { Drop(); return; }
         }
         if (State is PetState.Pounce or PetState.Peek) return;
         if (_support is { } edge && !edge.ContainsX(CenterX)) Drop();
@@ -172,7 +173,7 @@ public sealed class PetEngine
             case 3: Stretch(); break;
             case 4: SetState(PetState.Perch, _random.Next(6, 14)); break;
             case 5: if (_settings.AutoJump) JumpToWindow(false); else Idle(); break;
-            default: Pet(); break;
+            default: if (_support is { Window: not 0 }) Peek(); else Idle(); break;
         }
     }
 

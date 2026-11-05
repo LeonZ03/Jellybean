@@ -1,7 +1,7 @@
 {
-  "width": 192,
+  "width": 240,
   "height": 176,
-  "anchor": 96,
+  "anchor": 120,
   "foot": 164,
   "clips": {
     "walk-left": {

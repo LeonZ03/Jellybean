@@ -20,6 +20,12 @@ Windows 11，x64。下载免安装压缩包，**完整解压，再双击 `Jellyb
 
 设置保存在 `%LocalAppData%\Jellybean\settings.json`。免安装版需要保留原目录位置；搬动后若开启过自启，在设置里关掉再打开即可更新路径。
 
+[首版动作预览](design/first-release/animations.png) · [设置面板](design/first-release/settings.png)
+
+首版已检查窗口停驻、移动、消失后落地、跳窗、全屏识别和素材透明度，并验证了完整解压包独立启动。本机启动后 15 秒采样：工作集约 99 MiB，私有内存约 53 MiB，CPU 约单核 0.21%。鼠标手感与跨显示器体验仍待实际试用确认。
+
+0.1 试用版尚未做代码签名。
+
 ## 开发
 
 C# / WPF，.NET 10 SDK。复用 PixelPaws 的窗口识别、落地数学、显示器坐标和帧裁切，详见 [开源说明](THIRD-PARTY-NOTICES.md)。

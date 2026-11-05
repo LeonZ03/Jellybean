@@ -19,7 +19,7 @@ public sealed class PetWindow : Window
     private readonly UserSettings _settings;
     private readonly SpriteCatalog _sprites;
     private readonly Canvas _root = new() { Width = SpriteCatalog.Width, Height = SpriteCatalog.Height };
-    private readonly Image _image = new() { Width = SpriteCatalog.Width, Height = SpriteCatalog.Height, IsHitTestVisible = false };
+    private readonly Image _image = new() { Width = SpriteCatalog.Width, Height = SpriteCatalog.Height };
     private readonly DispatcherTimer _timer = new(DispatcherPriority.Input);
     private readonly DispatcherTimer _clickTimer = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
@@ -114,11 +114,7 @@ public sealed class PetWindow : Window
         if (!ReferenceEquals(image,_frame))
         {
             _frame = image; _image.Source = image;
-            var rgba = new FormatConvertedBitmap(image,PixelFormats.Bgra32,null,0);
-            var bytes = new byte[SpriteCatalog.Width*SpriteCatalog.Height*4];
-            rgba.CopyPixels(bytes,SpriteCatalog.Width*4,0);
-            _alpha = new byte[SpriteCatalog.Width*SpriteCatalog.Height];
-            for(var i=0;i<_alpha.Length;i++) _alpha[i]=bytes[i*4+3];
+            _alpha = _sprites.HitMask(image);
         }
         // The body sinks behind the window; only the part above its edge remains visible.
         _root.Clip = _engine.State == PetState.Peek

@@ -1,7 +1,7 @@
 <Window x:Class="Jellybean.UI.SettingsWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="糖豆 · 设置" Width="440" Height="625" MinHeight="560"
+ Title="糖豆 · 设置" Width="440" Height="680" MinHeight="560"
  ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen" Background="#FFF9F1">
  <ScrollViewer VerticalScrollBarVisibility="Auto">
   <StackPanel Margin="28,22,28,24">
