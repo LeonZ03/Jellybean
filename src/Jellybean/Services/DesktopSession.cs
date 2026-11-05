@@ -30,6 +30,7 @@ public sealed class DesktopSession : IDisposable
     {
         _showSignal=showSignal;
         Settings=UserSettings.Load();
+        if(AutoStart.Enabled) AutoStart.Enabled=true;
         _surfaces=new SurfaceProvider(_dpi) { MinimumClearance=136*Settings.Scale };
         Engine=new PetEngine(_surfaces,Settings,_sprites.WalkStrideLeft,_sprites.WalkStrideRight);
         _pet=new PetWindow(Engine,Settings,_sprites,_dpi);

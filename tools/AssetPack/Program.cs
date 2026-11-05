@@ -22,7 +22,7 @@ internal static class Program
         Root=Path.GetFullPath(args.Length>0?args[0]:"."); Output=Path.Combine(Root,"src/Jellybean/Assets"); Directory.CreateDirectory(Output);
         var body=Load("assets/animations/v2/turnaround.png");
         var regions=new[]{new Int32Rect(130,0,230,486),new Int32Rect(460,0,443,486),new Int32Rect(903,0,633,486),new Int32Rect(12,488,540,536),new Int32Rect(620,488,240,536),new Int32Rect(965,488,500,536)};
-        var views=regions.Select(r=>(BitmapSource)new CroppedBitmap(body,r)).ToArray();
+        var views=regions.Select(r=>Isolate(new CroppedBitmap(body,r))).ToArray();
         var names=new[]{"front","front-three-quarter","left-view","right-view","rear","rear-three-quarter"};
         for(var i=0;i<views.Length;i++)
         {
@@ -74,13 +74,17 @@ internal static class Program
     private static void Pack(string name,int columns,int rows,int[] durations,int[]? baselines=null,string? sourceName=null)
     {
         var source=Load("assets/animations/v2/"+(sourceName??name)+".png");
+        var padding=new (int Left,int Top)[columns*rows];
         var cells=Enumerable.Range(0,columns*rows).Select(i=>
         {
             var x=(int)Math.Round(i%columns*source.PixelWidth/(double)columns);
             var y=(int)Math.Round(i/columns*source.PixelHeight/(double)rows);
             var right=(int)Math.Round((i%columns+1)*source.PixelWidth/(double)columns);
             var bottom=(int)Math.Round((i/columns+1)*source.PixelHeight/(double)rows);
-            return (BitmapSource)new CroppedBitmap(source,new Int32Rect(x,y,right-x,bottom-y));
+            var left=Math.Max(0,x-24); var top=Math.Max(0,y-24);
+            padding[i]=(x-left,y-top);
+            right=Math.Min(source.PixelWidth,right+24); bottom=Math.Min(source.PixelHeight,bottom+24);
+            return Isolate(new CroppedBitmap(source,new Int32Rect(left,top,right-left,bottom-top)));
         }).ToArray();
         var first=Bounds(cells[0]);
         // Standing reference frames share a height; compact resting poses keep that anatomical unit.
@@ -90,12 +94,12 @@ internal static class Program
         for(var i=0;i<cells.Length;i++)
         {
             var b=Bounds(cells[i]);
-            var baseline=baselines?[i]??b.Bottom;
-            frames.Add(Draw(cells[i],anchor,baseline,scale));
+            var baseline=baselines is null?b.Bottom:baselines[i]+padding[i].Top;
+            frames.Add(Draw(cells[i],anchor+padding[i].Left-padding[0].Left,baseline,scale));
         }
         Save(name,frames,durations);
         double? stride=null;
-        if(name.StartsWith("walk-")) { stride=MeasureStride(cells,scale,name.EndsWith("left")); Strides.Add(stride.Value); }
+        if(name.StartsWith("walk-")) { stride=MeasureStride(cells,scale,name.EndsWith("left"),padding,source.PixelWidth/(double)columns); Strides.Add(stride.Value); }
         Calibration.Add(new{name,scale,headGap=HeadGap(cells[0])*scale,referenceHeight=first.Height*scale,stride});
     }
 
@@ -103,6 +107,47 @@ internal static class Program
     {
         var bgra=new FormatConvertedBitmap(bitmap,PixelFormats.Bgra32,null,0);
         var pixels=new byte[bgra.PixelWidth*bgra.PixelHeight*4]; bgra.CopyPixels(pixels,bgra.PixelWidth*4,0); return pixels;
+    }
+    // A padded cell recovers paws/tails crossing grid lines; connected components reject its neighbours.
+    private static BitmapSource Isolate(BitmapSource bitmap)
+    {
+        var width=bitmap.PixelWidth; var height=bitmap.PixelHeight; var pixels=Pixels(bitmap);
+        var labels=new int[width*height]; var queue=new int[labels.Length];
+        var sizes=new List<int>{0}; var biggest=0;
+        for(var start=0;start<labels.Length;start++)
+        {
+            if(labels[start]!=0 || pixels[start*4+3]<40) continue;
+            var id=sizes.Count; var read=0; var write=1; queue[0]=start; labels[start]=id;
+            while(read<write)
+            {
+                var point=queue[read++]; var x=point%width; var y=point/width;
+                for(var yy=Math.Max(0,y-1);yy<=Math.Min(height-1,y+1);yy++)
+                    for(var xx=Math.Max(0,x-1);xx<=Math.Min(width-1,x+1);xx++)
+                    { var p=yy*width+xx; if(labels[p]==0 && pixels[p*4+3]>=40) { labels[p]=id; queue[write++]=p; } }
+            }
+            sizes.Add(write); if(biggest==0 || write>sizes[biggest]) biggest=id;
+        }
+        var keep=new bool[sizes.Count]; keep[biggest]=true;
+        for(var p=0;p<labels.Length;p++)
+        {
+            if(labels[p]!=biggest) continue;
+            var x=p%width; var y=p/width;
+            for(var yy=Math.Max(0,y-6);yy<=Math.Min(height-1,y+6);yy++)
+                for(var xx=Math.Max(0,x-6);xx<=Math.Min(width-1,x+6);xx++) keep[labels[yy*width+xx]]=true;
+        }
+        keep[0]=false;
+        for(var p=0;p<labels.Length;p++)
+        {
+            var preserve=keep[labels[p]];
+            if(!preserve && labels[p]==0 && pixels[p*4+3]>=8)
+            {
+                var x=p%width; var y=p/width;
+                for(var yy=Math.Max(0,y-1);yy<=Math.Min(height-1,y+1) && !preserve;yy++)
+                    for(var xx=Math.Max(0,x-1);xx<=Math.Min(width-1,x+1);xx++) if(keep[labels[yy*width+xx]]) { preserve=true; break; }
+            }
+            if(!preserve) pixels[p*4]=pixels[p*4+1]=pixels[p*4+2]=pixels[p*4+3]=0;
+        }
+        var result=BitmapSource.Create(width,height,96,96,PixelFormats.Bgra32,null,pixels,width*4); result.Freeze(); return result;
     }
     private static Rect Bounds(BitmapSource bitmap)
     {
@@ -133,7 +178,7 @@ internal static class Program
         { var a=pixels[(y*bitmap.PixelWidth+x)*4+3]; if(a>40) {sum+=x*a;total+=a;} }
         return sum/total;
     }
-    private static double MeasureStride(BitmapSource[] cells,double scale,bool left)
+    private static double MeasureStride(BitmapSource[] cells,double scale,bool left,(int Left,int Top)[] padding,double cellWidth)
     {
         double[] Toes(BitmapSource image)
         {
@@ -149,11 +194,11 @@ internal static class Program
             }
             return toes.ToArray();
         }
-        var positions=cells.Select(Toes).ToArray(); var deltas=new List<double>();
+        var positions=cells.Select((cell,i)=>Toes(cell).Select(x=>x-padding[i].Left).ToArray()).ToArray(); var deltas=new List<double>();
         for(var i=0;i<cells.Length;i++)
         {
             var candidates=positions[i].SelectMany(a=>positions[(i+1)%cells.Length].Select(b=>(left?b-a:a-b)))
-                .Where(d=>d>2 && d<cells[i].PixelWidth*.15).Order().ToArray();
+                .Where(d=>d>2 && d<cellWidth*.15).Order().ToArray();
             if(candidates.Length>0) deltas.Add(candidates[0]);
         }
         return deltas.Count>=4?Math.Clamp(deltas.Order().ElementAt(deltas.Count/2)*scale*cells.Length,48,140):90;

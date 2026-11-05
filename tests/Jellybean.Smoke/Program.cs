@@ -185,7 +185,7 @@ internal static class Program
         using(var dc=visual.RenderOpen())
         {
             dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(238,239,227)),null,new Rect(0,0,1200,650));
-            DrawText(dc,"糖豆 Jellybean · 首版角色与动作",36,24,24);
+            DrawText(dc,"糖豆 Jellybean · v0.2 角色与动作",36,24,24);
             DrawText(dc,"实际运行素材，按 1.6 倍大小展示",36,60,13);
             var clips=new[]{"walk-left","walk-right","pet","doze","stretch","perch"};
             var labels=new[]{"向左走","向右走","摸摸","打盹","伸懒腰","背身坐坐"};
