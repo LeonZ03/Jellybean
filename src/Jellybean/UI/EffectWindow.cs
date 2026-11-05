@@ -23,7 +23,7 @@ public sealed class EffectWindow : Window
         SourceInitialized+=(_,_)=> { _handle=new WindowInteropHelper(this).Handle; Win32.ConfigureOverlay(_handle,true); };
     }
 
-    public void Update(PetEngine engine,UserSettings settings,bool running)
+    public void Update(PetEngine engine,UserSettings settings,bool running,double? headHeight=null)
     {
         var show=running && (_canvas.Toy?engine.ToyActive:engine.EffectRemaining>0);
         if(!show) { if(IsVisible) Hide(); return; }
@@ -32,24 +32,29 @@ public sealed class EffectWindow : Window
         var scale=_dpi/VisualTreeHelper.GetDpi(this).DpiScaleX;
         if (_canvas.LayoutTransform is not ScaleTransform old || Math.Abs(old.ScaleX-scale)>.0001)
             _canvas.LayoutTransform=new ScaleTransform(scale,scale);
-        _canvas.Text=engine.Bubble; _canvas.Hearts=engine.Hearts; _canvas.Age=engine.Age;
+        _canvas.Text=engine.Bubble; _canvas.Hearts=engine.Hearts; _canvas.Age=engine.AliveTime;
         var x=_canvas.Toy?engine.ToyPosition.X-24:engine.CenterX-135;
-        var y=_canvas.Toy?engine.ToyPosition.Y-52:engine.FeetY-engine.BodyHeight-95;
+        var y=_canvas.Toy?engine.ToyPosition.Y-52:engine.FeetY-(headHeight??engine.BodyHeight)-_canvas.HeightAboveHead;
         if (!_canvas.Toy)
         {
             var area=engine.WorkArea;
             x=Math.Clamp(x,area.Left+4,Math.Max(area.Left+4,area.Right-274));
             y=Math.Max(area.Top+4,y);
+            _canvas.TailX=Math.Clamp(engine.CenterX-x,25,245);
         }
         Win32.Place(_handle,x*_dpi,y*_dpi,(_canvas.Toy?120:270)*_dpi,(_canvas.Toy?90:105)*_dpi);
         _canvas.InvalidateVisual();
     }
 
+    public void RaiseAboveApps() { if (IsVisible) Win32.RaiseOverlay(_handle); }
+
     private sealed class EffectCanvas : FrameworkElement
     {
         public bool Toy,Hearts;
         public string? Text;
-        public double Age;
+        public double Age, TailX=135;
+        public double HeightAboveHead => Text is null?95:MakeText().Height+59;
+        private FormattedText MakeText() => new(Text??"",CultureInfo.GetCultureInfo("zh-CN"),FlowDirection.LeftToRight,new Typeface("Microsoft YaHei UI"),13,new SolidColorBrush(Color.FromRgb(67,57,47)),VisualTreeHelper.GetDpi(this).PixelsPerDip) {MaxTextWidth=230};
         protected override void OnRender(DrawingContext dc)
         {
             if(Toy)
@@ -63,8 +68,19 @@ public sealed class EffectWindow : Window
             }
             if(Text is not null)
             {
-                var text=new FormattedText(Text,CultureInfo.GetCultureInfo("zh-CN"),FlowDirection.LeftToRight,new Typeface("Microsoft YaHei UI"),13,new SolidColorBrush(Color.FromRgb(67,57,47)),VisualTreeHelper.GetDpi(this).PixelsPerDip) { MaxTextWidth=230 };
-                dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(255,249,240)),new Pen(new SolidColorBrush(Color.FromRgb(226,197,172)),1),new Rect(4,12,260,text.Height+28),12,12);
+                var text=MakeText();
+                var bottom=12+text.Height+28;
+                var bubble=new StreamGeometry();
+                using(var c=bubble.Open())
+                {
+                    c.BeginFigure(new Point(16,12),true,true); c.LineTo(new Point(252,12),true,false);
+                    c.QuadraticBezierTo(new Point(264,12),new Point(264,24),true,false);
+                    c.LineTo(new Point(264,bottom-12),true,false); c.QuadraticBezierTo(new Point(264,bottom),new Point(252,bottom),true,false);
+                    c.LineTo(new Point(TailX+9,bottom),true,false); c.LineTo(new Point(TailX,bottom+11),true,false); c.LineTo(new Point(TailX-9,bottom),true,false);
+                    c.LineTo(new Point(16,bottom),true,false); c.QuadraticBezierTo(new Point(4,bottom),new Point(4,bottom-12),true,false);
+                    c.LineTo(new Point(4,24),true,false); c.QuadraticBezierTo(new Point(4,12),new Point(16,12),true,false);
+                }
+                dc.DrawGeometry(new SolidColorBrush(Color.FromRgb(255,249,240)),new Pen(new SolidColorBrush(Color.FromRgb(226,197,172)),1),bubble);
                 dc.DrawText(text,new Point(19,25));
             }
             else if(Hearts)

@@ -1,161 +1,11 @@
 {
   "width": 240,
-  "height": 176,
+  "height": 240,
   "anchor": 120,
   "foot": 164,
+  "walkStrideLeft": 68.4,
+  "walkStrideRight": 94,
   "clips": {
-    "walk-left": {
-      "file": "walk-left.png",
-      "frames": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
-      "durations": [
-        140,
-        140,
-        140,
-        140,
-        140,
-        140
-      ]
-    },
-    "walk-right": {
-      "file": "walk-right.png",
-      "frames": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
-      "durations": [
-        140,
-        140,
-        140,
-        140,
-        140,
-        140
-      ]
-    },
-    "doze": {
-      "file": "doze.png",
-      "frames": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
-      "durations": [
-        550,
-        460,
-        220,
-        240,
-        520,
-        650
-      ]
-    },
-    "pet": {
-      "file": "pet.png",
-      "frames": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
-      "durations": [
-        300,
-        180,
-        200,
-        270,
-        180,
-        340
-      ]
-    },
-    "perch": {
-      "file": "perch.png",
-      "frames": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
-      "durations": [
-        460,
-        220,
-        280,
-        360,
-        250,
-        480
-      ]
-    },
-    "stretch": {
-      "file": "stretch.png",
-      "frames": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
-      "durations": [
-        450,
-        450,
-        650,
-        600,
-        450,
-        500
-      ]
-    },
-    "pounce-left": {
-      "file": "pounce-left.png",
-      "frames": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
-      "durations": [
-        370,
-        175,
-        220,
-        180,
-        145,
-        390
-      ]
-    },
-    "pounce-right": {
-      "file": "pounce-right.png",
-      "frames": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
-      "durations": [
-        370,
-        175,
-        220,
-        180,
-        145,
-        390
-      ]
-    },
     "front": {
       "file": "front.png",
       "frames": [
@@ -174,8 +24,8 @@
         1000
       ]
     },
-    "idle-left": {
-      "file": "idle-left.png",
+    "left-view": {
+      "file": "left-view.png",
       "frames": [
         0
       ],
@@ -183,8 +33,8 @@
         1000
       ]
     },
-    "idle-right": {
-      "file": "idle-right.png",
+    "right-view": {
+      "file": "right-view.png",
       "frames": [
         0
       ],
@@ -210,7 +60,69 @@
         1000
       ]
     },
-    "jump-left": {
+    "walk-left": {
+      "file": "walk-left.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "durations": [
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ]
+    },
+    "walk-right": {
+      "file": "walk-right.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "durations": [
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ]
+    },
+    "pounce-left": {
       "file": "pounce-left.png",
       "frames": [
         0,
@@ -221,15 +133,15 @@
         5
       ],
       "durations": [
-        70,
-        70,
-        80,
-        400,
-        80,
-        80
+        200,
+        160,
+        190,
+        450,
+        170,
+        200
       ]
     },
-    "jump-right": {
+    "pounce-right": {
       "file": "pounce-right.png",
       "frames": [
         0,
@@ -240,12 +152,325 @@
         5
       ],
       "durations": [
-        70,
-        70,
-        80,
+        200,
+        160,
+        190,
+        450,
+        170,
+        200
+      ]
+    },
+    "pet": {
+      "file": "pet.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "durations": [
+        380,
+        300,
+        260,
+        280,
+        300,
+        580
+      ]
+    },
+    "perch": {
+      "file": "perch.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "durations": [
+        600,
+        650,
+        300,
+        450,
+        700,
+        700
+      ]
+    },
+    "stretch": {
+      "file": "stretch.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "durations": [
+        200,
         400,
+        500,
+        700,
+        500,
+        500
+      ]
+    },
+    "rest-left": {
+      "file": "rest-left.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "durations": [
+        100,
+        220,
+        240,
+        300,
+        250,
+        1000
+      ]
+    },
+    "rest-window": {
+      "file": "rest-window.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "durations": [
+        100,
+        220,
+        240,
+        300,
+        900,
+        900
+      ]
+    },
+    "idle-left": {
+      "file": "walk-left.png",
+      "frames": [
+        0
+      ],
+      "durations": [
+        1000
+      ]
+    },
+    "takeoff-left": {
+      "file": "pounce-left.png",
+      "frames": [
+        0,
+        1,
+        2
+      ],
+      "durations": [
+        70,
+        90,
+        100
+      ]
+    },
+    "fall-left": {
+      "file": "pounce-left.png",
+      "frames": [
+        3
+      ],
+      "durations": [
+        1000
+      ]
+    },
+    "land-left": {
+      "file": "pounce-left.png",
+      "frames": [
+        4,
+        2,
+        1,
+        0
+      ],
+      "durations": [
+        90,
         80,
-        80
+        150,
+        180
+      ]
+    },
+    "jump-left": {
+      "file": "pounce-left.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        0
+      ],
+      "durations": [
+        70,
+        90,
+        100,
+        600,
+        150,
+        150
+      ]
+    },
+    "idle-right": {
+      "file": "walk-right.png",
+      "frames": [
+        0
+      ],
+      "durations": [
+        1000
+      ]
+    },
+    "takeoff-right": {
+      "file": "pounce-right.png",
+      "frames": [
+        0,
+        1,
+        2
+      ],
+      "durations": [
+        70,
+        90,
+        100
+      ]
+    },
+    "fall-right": {
+      "file": "pounce-right.png",
+      "frames": [
+        3
+      ],
+      "durations": [
+        1000
+      ]
+    },
+    "land-right": {
+      "file": "pounce-right.png",
+      "frames": [
+        4,
+        2,
+        1,
+        0
+      ],
+      "durations": [
+        90,
+        80,
+        150,
+        180
+      ]
+    },
+    "jump-right": {
+      "file": "pounce-right.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        0
+      ],
+      "durations": [
+        70,
+        90,
+        100,
+        600,
+        150,
+        150
+      ]
+    },
+    "lie-left": {
+      "file": "rest-left.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "durations": [
+        100,
+        220,
+        240,
+        300
+      ]
+    },
+    "doze": {
+      "file": "rest-left.png",
+      "frames": [
+        5,
+        4,
+        5
+      ],
+      "durations": [
+        2400,
+        220,
+        1800
+      ]
+    },
+    "rise-left": {
+      "file": "rest-left.png",
+      "frames": [
+        3,
+        2,
+        1,
+        0
+      ],
+      "durations": [
+        120,
+        200,
+        230,
+        230
+      ]
+    },
+    "window-lie": {
+      "file": "rest-window.png",
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "durations": [
+        100,
+        220,
+        240,
+        300
+      ]
+    },
+    "window-rest": {
+      "file": "rest-window.png",
+      "frames": [
+        3,
+        4,
+        5,
+        4
+      ],
+      "durations": [
+        700,
+        900,
+        700,
+        900
+      ]
+    },
+    "window-rise": {
+      "file": "rest-window.png",
+      "frames": [
+        3,
+        2,
+        1,
+        0
+      ],
+      "durations": [
+        120,
+        200,
+        230,
+        230
       ]
     }
   }

@@ -19,7 +19,7 @@ public sealed class PetWindow : Window
     private readonly UserSettings _settings;
     private readonly SpriteCatalog _sprites;
     private readonly Canvas _root = new() { Width = SpriteCatalog.Width, Height = SpriteCatalog.Height };
-    private readonly Image _image = new() { Width = SpriteCatalog.Width, Height = SpriteCatalog.Height };
+    private readonly PetVisual _image = new();
     private readonly DispatcherTimer _timer = new(DispatcherPriority.Input);
     private readonly DispatcherTimer _clickTimer = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
@@ -28,6 +28,8 @@ public sealed class PetWindow : Window
     private Point _down, _dragOffset;
     private BitmapSource? _frame;
     private byte[] _alpha = Array.Empty<byte>();
+    private int _headTop=36;
+    public double HeadHeight => (SpriteCatalog.Foot-_headTop)*_settings.Scale;
     private nint _handle;
     private int _lastX = int.MinValue, _lastY = int.MinValue, _lastW, _lastH;
     private readonly double _dpi;
@@ -46,7 +48,7 @@ public sealed class PetWindow : Window
         Width = SpriteCatalog.Width * settings.Scale; Height = SpriteCatalog.Height * settings.Scale;
         Content = _root; _root.Children.Add(_image);
         RenderOptions.SetBitmapScalingMode(_image, BitmapScalingMode.NearestNeighbor);
-        _timer.Interval = TimeSpan.FromMilliseconds(80);
+        _timer.Interval = TimeSpan.FromMilliseconds(33);
         _timer.Tick += (_, _) => Tick();
         _clickTimer.Interval = TimeSpan.FromMilliseconds(System.Windows.Forms.SystemInformation.DoubleClickTime);
         _clickTimer.Tick += (_, _) => { _clickTimer.Stop(); _engine.Pet(); Render(); };
@@ -88,6 +90,8 @@ public sealed class PetWindow : Window
         else { _timer.Stop(); _clickTimer.Stop(); Hide(); }
     }
 
+    public void RaiseAboveApps() { if (IsVisible && _settings.Topmost) Win32.RaiseOverlay(_handle); }
+
     private void Tick()
     {
         var now = _clock.Elapsed.TotalSeconds;
@@ -100,7 +104,6 @@ public sealed class PetWindow : Window
             _engine.DragTo(cursor.X/_dpi-_dragOffset.X,cursor.Y/_dpi-_dragOffset.Y);
         }
         _engine.Tick(dt);
-        _timer.Interval = TimeSpan.FromMilliseconds(_engine.Moving ? 33 : 100);
         Render(); FrameUpdated?.Invoke();
     }
 
@@ -109,12 +112,14 @@ public sealed class PetWindow : Window
         if (_handle == 0) return;
         Topmost = _settings.Topmost;
         SyncScale();
-        var loop = _engine.State is not (PetState.Pounce or PetState.Jump or PetState.Stretch);
-        var image = _sprites.Frame(_engine.Animation,_engine.Age,loop);
+        _image.Update(_sprites,_engine);
+        var image = _image.CurrentFrame!;
         if (!ReferenceEquals(image,_frame))
         {
-            _frame = image; _image.Source = image;
+            _frame = image;
             _alpha = _sprites.HitMask(image);
+            var first=Array.FindIndex(_alpha,a=>a>40);
+            _headTop=first<0?36:first/SpriteCatalog.Width;
         }
         // The body sinks behind the window; only the part above its edge remains visible.
         _root.Clip = _engine.State == PetState.Peek
@@ -146,6 +151,7 @@ public sealed class PetWindow : Window
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
+        _engine.Interact();
         _clickTimer.Stop();
         if (e.ClickCount >= 2) { _doubleClick=true; _engine.ToggleToy(); e.Handled=true; return; }
         Win32.GetCursorPos(out var cursor);
@@ -159,7 +165,7 @@ public sealed class PetWindow : Window
         if (!_pressing) return;
         Win32.GetCursorPos(out var cursor);
         var point = new Point(cursor.X/_dpi,cursor.Y/_dpi);
-        if (!_dragging && (point-_down).Length>6) { _dragging=true; _engine.BeginDrag(); }
+        if (!_dragging && (point-_down).Length>6) { _dragging=true; _image.Freeze(); _engine.BeginDrag(); }
         if (_dragging) { _engine.DragTo(point.X-_dragOffset.X,point.Y-_dragOffset.Y); Render(); }
     }
 
@@ -181,6 +187,6 @@ public sealed class PetWindow : Window
     }
 
     protected override void OnLostMouseCapture(System.Windows.Input.MouseEventArgs e) { base.OnLostMouseCapture(e); if (_pressing) EndDrag(); }
-    protected override void OnMouseRightButtonUp(MouseButtonEventArgs e) { _clickTimer.Stop(); MenuRequested?.Invoke(); e.Handled=true; }
-    protected override void OnMouseWheel(MouseWheelEventArgs e) { ScaleRequested?.Invoke(e.Delta>0?.1:-.1); e.Handled=true; }
+    protected override void OnMouseRightButtonUp(MouseButtonEventArgs e) { _engine.Interact(); _clickTimer.Stop(); MenuRequested?.Invoke(); e.Handled=true; }
+    protected override void OnMouseWheel(MouseWheelEventArgs e) { _engine.Interact(); ScaleRequested?.Invoke(e.Delta>0?.1:-.1); e.Handled=true; }
 }

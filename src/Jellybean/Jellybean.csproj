@@ -10,7 +10,7 @@
     <ApplicationIcon>Assets/jellybean.ico</ApplicationIcon>
     <AssemblyName>Jellybean</AssemblyName>
     <RootNamespace>Jellybean</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>LeonZ03</Authors>
     <Product>糖豆 Jellybean</Product>
     <Description>一只住在桌面上的糖豆。</Description>

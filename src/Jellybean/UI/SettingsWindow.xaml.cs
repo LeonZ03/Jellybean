@@ -12,6 +12,7 @@ public partial class SettingsWindow : Window
     private readonly UserSettings _settings;
     public event Action? SettingsSaved;
     public event Action? PreviewReminder;
+    public event Action<double>? ScalePreview;
 
     public SettingsWindow(UserSettings settings,SpriteCatalog sprites)
     {
@@ -28,6 +29,7 @@ public partial class SettingsWindow : Window
     private void PetSizeChanged(object sender,RoutedPropertyChangedEventArgs<double> e)
     {
         if(SizeLabel is not null) SizeLabel.Text=$"{e.NewValue:0}%";
+        ScalePreview?.Invoke(e.NewValue/100);
     }
 
     private void PreviewClicked(object sender,RoutedEventArgs e) => PreviewReminder?.Invoke();

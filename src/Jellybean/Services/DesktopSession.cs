@@ -31,7 +31,7 @@ public sealed class DesktopSession : IDisposable
         _showSignal=showSignal;
         Settings=UserSettings.Load();
         _surfaces=new SurfaceProvider(_dpi) { MinimumClearance=136*Settings.Scale };
-        Engine=new PetEngine(_surfaces,Settings);
+        Engine=new PetEngine(_surfaces,Settings,_sprites.WalkStrideLeft,_sprites.WalkStrideRight);
         _pet=new PetWindow(Engine,Settings,_sprites,_dpi);
         _effects=new EffectWindow(_dpi); _toy=new EffectWindow(_dpi,true);
         _tray=new TrayService(this);
@@ -49,6 +49,8 @@ public sealed class DesktopSession : IDisposable
     {
         if(_showSignal.WaitOne(0)) ResetPosition();
         UpdateVisibility();
+        if(_running && Settings.Topmost && Win32.IsForegroundFullscreen((uint)Environment.ProcessId))
+        { _pet.RaiseAboveApps(); _effects.RaiseAboveApps(); _toy.RaiseAboveApps(); }
         var now=DateTime.Now;
         if(_intervalDue is { } interval && now>=interval)
         { _pendingReminder=true; _intervalDue=now.AddMinutes(Settings.ReminderMinutes); }
@@ -60,7 +62,7 @@ public sealed class DesktopSession : IDisposable
 
     private void UpdateVisibility()
     {
-        var shouldRun=!Hidden && !(Settings.HideInFullscreen && Win32.IsForegroundFullscreen((uint)Environment.ProcessId));
+        var shouldRun=!Hidden && !(Settings.HideInFullscreen && GameDetector.ShouldHideForGame((uint)Environment.ProcessId));
         if(shouldRun==_running) return;
         _running=shouldRun;
         if(!shouldRun) Engine.StopToy();
@@ -75,12 +77,12 @@ public sealed class DesktopSession : IDisposable
             Win32.GetCursorPos(out var point); Engine.ToyPosition=new Point(point.X/_dpi,point.Y/_dpi);
             if((Win32.GetAsyncKeyState(0x1B)&0x8000)!=0) Engine.StopToy();
         }
-        _effects.Update(Engine,Settings,_running); _toy.Update(Engine,Settings,_running);
+        _effects.Update(Engine,Settings,_running,_pet.HeadHeight); _toy.Update(Engine,Settings,_running);
     }
 
     public void Perform(Action action)
     {
-        Hidden=false; UpdateVisibility(); action(); _pet.Render(); UpdateEffects();
+        Engine.Interact(); Hidden=false; UpdateVisibility(); action(); _pet.Render(); UpdateEffects();
     }
 
     public void ShowAngle(string clip) => Perform(()=>Engine.ShowAngle(clip));
@@ -115,11 +117,17 @@ public sealed class DesktopSession : IDisposable
 
     public void OpenSettings()
     {
+        Engine.Interact();
         if(_settingsWindow is not null) { _settingsWindow.Activate(); return; }
         _settingsWindow=new SettingsWindow(Settings,_sprites);
+        _settingsWindow.ScalePreview+=scale=>
+        {
+            Engine.Interact(); Settings.Scale=scale; _surfaces.MinimumClearance=136*scale;
+            _pet.Render(); UpdateEffects();
+        };
         _settingsWindow.SettingsSaved+=()=> { SaveSettings(); ScheduleReminders(); };
         _settingsWindow.PreviewReminder+=PreviewReminder;
-        _settingsWindow.Closed+=(_,_)=>_settingsWindow=null;
+        _settingsWindow.Closed+=(_,_)=> { _settingsWindow=null; Settings.Save(); };
         _settingsWindow.Show(); _settingsWindow.Activate();
     }
 

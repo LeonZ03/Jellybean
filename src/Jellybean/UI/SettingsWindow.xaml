@@ -18,11 +18,11 @@
     <TextBlock Text="糖豆的大小" FontWeight="SemiBold"/>
     <TextBlock x:Name="SizeLabel" Grid.Column="1" HorizontalAlignment="Right" Foreground="{StaticResource Muted}" />
    </Grid>
-   <Slider x:Name="SizeSlider" Minimum="70" Maximum="180" TickFrequency="10" IsSnapToTickEnabled="True" ValueChanged="PetSizeChanged" AutomationProperties.Name="糖豆的大小" />
+   <Slider x:Name="SizeSlider" Minimum="70" Maximum="180" TickFrequency="10" SmallChange="1" ValueChanged="PetSizeChanged" AutomationProperties.Name="糖豆的大小" />
    <CheckBox x:Name="Autonomous" Content="自己走走、打盹和伸懒腰" Margin="0,17,0,5" />
    <CheckBox x:Name="AutoJump" Content="偶尔跳到附近窗口" />
    <CheckBox x:Name="AlwaysTop" Content="糖豆显示在其他窗口上方" />
-   <CheckBox x:Name="Fullscreen" Content="全屏游戏或看视频时自动收起" />
+   <CheckBox x:Name="Fullscreen" Content="全屏游戏时收起（办公、视频仍显示）" />
    <CheckBox x:Name="StartAtLogin" Content="登录 Windows 时启动糖豆" />
    <CheckBox x:Name="Silent" Content="保持安静（提醒也不播放声音）" />
    <Border Height="1" Background="#E9DDD0" Margin="0,15,0,18" />

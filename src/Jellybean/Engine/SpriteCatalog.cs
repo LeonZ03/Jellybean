@@ -15,13 +15,18 @@ public sealed class SpriteCatalog
 
     private readonly Dictionary<string, Clip> _clips = new();
     private readonly Dictionary<BitmapSource, byte[]> _hitMasks = new();
-    public const int Width = 240, Height = 176, Anchor = 120, Foot = 164;
+    public const int Width = 240, Height = 240, Anchor = 120, Foot = 164;
+    public double WalkStrideLeft { get; }
+    public double WalkStrideRight { get; }
 
     public SpriteCatalog()
     {
         var directory = Path.Combine(AppContext.BaseDirectory, "Assets");
         using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory,"animations.json")));
+        WalkStrideLeft=manifest.RootElement.GetProperty("walkStrideLeft").GetDouble();
+        WalkStrideRight=manifest.RootElement.GetProperty("walkStrideRight").GetDouble();
         var atlases = new Dictionary<string, BitmapImage>();
+        var frameCache = new Dictionary<(string,int),BitmapSource>();
         foreach (var entry in manifest.RootElement.GetProperty("clips").EnumerateObject())
         {
             var name = entry.Value.GetProperty("file").GetString()!;
@@ -34,8 +39,9 @@ public sealed class SpriteCatalog
             }
             var frames = entry.Value.GetProperty("frames").EnumerateArray().Select(index =>
             {
+                if(frameCache.TryGetValue((name,index.GetInt32()),out var cached)) return cached;
                 var frame = new CroppedBitmap(atlas,new Int32Rect(index.GetInt32()*Width,0,Width,Height));
-                frame.Freeze(); return (BitmapSource)frame;
+                frame.Freeze(); frameCache.Add((name,index.GetInt32()),frame); return (BitmapSource)frame;
             }).ToArray();
             _clips[entry.Name] = new Clip(frames,entry.Value.GetProperty("durations").EnumerateArray().Select(d=>d.GetInt32()).ToArray());
         }
@@ -62,7 +68,8 @@ public sealed class SpriteCatalog
         bgra.CopyPixels(bytes,Width*4,0);
         mask = new byte[Width*Height];
         for(var i=0;i<mask.Length;i++) mask[i]=bytes[i*4+3];
-        _hitMasks.Add(frame,mask);
+        // A grabbed pose is a temporary snapshot; atlas masks are the reusable ones.
+        if(frame is CroppedBitmap) _hitMasks.Add(frame,mask);
         return mask;
     }
 }

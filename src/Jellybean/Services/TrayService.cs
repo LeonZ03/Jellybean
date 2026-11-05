@@ -24,14 +24,14 @@ public sealed class TrayService : IDisposable
         Add("从窗沿探头",()=>session.Perform(session.Engine.Peek));
         var views=new Forms.ToolStripMenuItem("看看其他角度");
         var names=new[]{"正面","正面斜侧","左侧","右侧","背面","背面斜侧"};
-        var clips=new[]{"front","front-three-quarter","idle-left","idle-right","rear","rear-three-quarter"};
+        var clips=new[]{"front","front-three-quarter","left-view","right-view","rear","rear-three-quarter"};
         for(var i=0;i<names.Length;i++) { var clip=clips[i]; views.DropDownItems.Add(names[i],null,(_,_)=>session.ShowAngle(clip)); }
         _menu.Items.Add(views);
         _menu.Items.Add(new Forms.ToolStripSeparator());
         Check("显示糖豆",()=>!session.Hidden,()=>session.SetHidden(!session.Hidden));
         Check("自己活动",()=>session.Settings.Autonomous,()=> { session.Settings.Autonomous=!session.Settings.Autonomous; session.SaveSettings(); });
         Check("置顶",()=>session.Settings.Topmost,()=> { session.Settings.Topmost=!session.Settings.Topmost; session.SaveSettings(); });
-        Check("全屏时收起",()=>session.Settings.HideInFullscreen,()=> { session.Settings.HideInFullscreen=!session.Settings.HideInFullscreen; session.SaveSettings(); });
+        Check("全屏游戏时收起",()=>session.Settings.HideInFullscreen,()=> { session.Settings.HideInFullscreen=!session.Settings.HideInFullscreen; session.SaveSettings(); });
         _menu.Items.Add(new Forms.ToolStripSeparator());
         Add("把糖豆叫回来",session.ResetPosition);
         Add("设置…",session.OpenSettings);

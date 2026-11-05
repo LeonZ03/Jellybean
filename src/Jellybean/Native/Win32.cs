@@ -93,9 +93,13 @@ internal static class Win32
         SetWindowLong(window, GWL_EXSTYLE, flags);
     }
 
+    public static void RaiseOverlay(nint window) => SetWindowPos(window, -1, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010);
+
     public static bool IsForegroundFullscreen(uint ownProcessId)
+        => IsWindowFullscreen(GetForegroundWindow(),ownProcessId);
+
+    internal static bool IsWindowFullscreen(nint window,uint ownProcessId)
     {
-        var window = GetForegroundWindow();
         GetWindowThreadProcessId(window, out var processId);
         if (window == 0 || processId == ownProcessId) return false;
         var name = new StringBuilder(80);

@@ -15,13 +15,15 @@ public sealed class SurfaceProvider
 {
     private readonly uint _processId;
     private readonly double _scale;
+    private readonly Func<nint,bool>? _windowFilter;
     public DesktopGeometry Desktop { get; private set; }
     public IReadOnlyList<Surface> Surfaces { get; private set; } = Array.Empty<Surface>();
     public double MinimumClearance { get; set; } = 136;
 
-    public SurfaceProvider(double scale,uint? ownProcessId=null)
+    public SurfaceProvider(double scale,uint? ownProcessId=null,Func<nint,bool>? windowFilter=null)
     {
         _scale = scale;
+        _windowFilter=windowFilter;
         _processId = ownProcessId ?? (uint)Environment.ProcessId;
         Desktop = DesktopGeometry.Capture(scale);
         Refresh();
@@ -69,7 +71,7 @@ public sealed class SurfaceProvider
     private bool IsEligible(nint window)
     {
         Win32.GetWindowThreadProcessId(window, out var processId);
-        return processId != _processId && Win32.IsWindowVisible(window) && !Win32.IsIconic(window) &&
+        return (_windowFilter?.Invoke(window)??true) && processId != _processId && Win32.IsWindowVisible(window) && !Win32.IsIconic(window) &&
             !Win32.IsCloaked(window) && Win32.GetWindowTextLength(window) > 0 &&
             (Win32.GetWindowLong(window, Win32.GWL_EXSTYLE) & Win32.WS_EX_TOOLWINDOW) == 0;
     }
