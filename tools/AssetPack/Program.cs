@@ -19,6 +19,7 @@ internal static class Program
     private static void Main(string[] args)
     {
         Root=Path.GetFullPath(args.Length>0?args[0]:"."); Output=Path.Combine(Root,"src/Jellybean/Assets"); Directory.CreateDirectory(Output);
+        if(args.Contains("--walk-review")) { ExportWalkReview(); return; }
         var body=Load("assets/animations/v2/turnaround.png");
         var regions=new[]{new Int32Rect(130,0,230,486),new Int32Rect(460,0,443,486),new Int32Rect(903,0,633,486),new Int32Rect(12,488,540,536),new Int32Rect(620,488,240,536),new Int32Rect(965,488,500,536)};
         var views=regions.Select(r=>Isolate(new CroppedBitmap(body,r))).ToArray();
@@ -28,16 +29,30 @@ internal static class Program
             var b=Bounds(views[i]); var s=124/b.Height;
             Save(names[i],new[]{Draw(views[i],(b.Left+b.Right)/2,b.Bottom,s)},new[]{1000});
         }
+        Pack("walk-left",4,3,Enumerable.Repeat(80,12).ToArray());
+        Pack("walk-right",4,3,Enumerable.Repeat(80,12).ToArray());
+        Pack("leap-left",3,2,Enumerable.Repeat(100,6).ToArray(),sourceName:"pounce-left");
+        Pack("leap-right",3,2,Enumerable.Repeat(100,6).ToArray(),sourceName:"pounce-right");
         Pack("pet",3,2,new[]{380,300,260,280,300,580});
         Pack("perch",3,2,new[]{600,650,300,450,700,700});
         Pack("stretch",3,2,new[]{200,400,500,700,500,500});
         Pack("rest-left",3,2,new[]{100,220,240,300,250,1000},sourceName:"doze");
         Pack("rest-window",3,2,new[]{100,220,240,300,900,900},new[]{405,405,398,324,326,325},"window-rest");
-        var rig=new MotionRig(Load("assets/animations/v3/motion-rig.png"),Isolate);
-        rig.Pack(Save);
         var held=Isolate(Load("assets/animations/v3/held.png"));
         foreach(var direction in new[]{"left","right"})
-            Save("held-"+direction,new[]{MotionRig.Held(held,direction=="right")},new[]{1000});
+        {
+            var source="leap-"+direction;
+            Alias("idle-"+direction,"walk-"+direction,new[]{0},new[]{1000});
+            Alias("stalk-"+direction,"walk-"+direction,Enumerable.Range(0,12).ToArray(),Enumerable.Repeat(80,12).ToArray());
+            Alias("crouch-"+direction,source,new[]{2},new[]{1000});
+            Alias("takeoff-"+direction,source,new[]{0,1,2},new[]{40,45,45});
+            Alias("air-"+direction,source,new[]{3},new[]{320});
+            Alias("fall-"+direction,source,new[]{3},new[]{1000});
+            Alias("land-"+direction,source,new[]{4,2,1,0},new[]{45,45,80,110});
+            Alias("catch-"+direction,source,new[]{2},new[]{180});
+            Alias("pounce-"+direction,source,new[]{2,3},new[]{100,280});
+            Save("held-"+direction,new[]{Held(held,direction=="right")},new[]{1000});
+        }
         Alias("lie-left","rest-left",new[]{0,1,2,3},new[]{100,220,240,300});
         Alias("doze","rest-left",new[]{5,4,5},new[]{2400,220,1800});
         Alias("rise-left","rest-left",new[]{3,2,1,0},new[]{120,200,230,230});
@@ -45,7 +60,7 @@ internal static class Program
         Alias("window-rest","rest-window",new[]{3,4,5,4},new[]{700,900,700,900});
         Alias("window-rise","rest-window",new[]{3,2,1,0},new[]{120,200,230,230});
         var options=new JsonSerializerOptions{WriteIndented=true};
-        File.WriteAllText(Path.Combine(Output,"animations.json"),JsonSerializer.Serialize(new{width=Width,height=Height,anchor=Anchor,foot=Foot,walkStrideLeft=MotionRig.Stride,walkStrideRight=MotionRig.Stride,clips=Clips},options));
+        File.WriteAllText(Path.Combine(Output,"animations.json"),JsonSerializer.Serialize(new{width=Width,height=Height,anchor=Anchor,foot=Foot,walkStrideLeft=68.4,walkStrideRight=94.0,clips=Clips},options));
         Directory.CreateDirectory(Path.Combine(Root,"artifacts"));
         File.WriteAllText(Path.Combine(Root,"artifacts/animation-calibration.json"),JsonSerializer.Serialize(Calibration,options));
         ShaderCompiler.Compile(Path.Combine(Root,"src/Jellybean/Shaders/PetMotion.hlsl"),Path.Combine(Output,"pet-motion.ps"));
@@ -172,6 +187,61 @@ internal static class Program
         var visual=new DrawingVisual(); RenderOptions.SetBitmapScalingMode(visual,BitmapScalingMode.HighQuality);
         using(var dc=visual.RenderOpen()) dc.DrawImage(source,new Rect(Anchor-anchor*scale,Foot-baseline*scale,source.PixelWidth*scale,source.PixelHeight*scale));
         var bitmap=new RenderTargetBitmap(Width,Height,96,96,PixelFormats.Pbgra32); bitmap.Render(visual); bitmap.Freeze(); return bitmap;
+    }
+    private static BitmapSource Held(BitmapSource source,bool right)
+    {
+        var visual=new DrawingVisual(); RenderOptions.SetBitmapScalingMode(visual,BitmapScalingMode.HighQuality);
+        using(var dc=visual.RenderOpen())
+        {
+            if(right) dc.PushTransform(new ScaleTransform(-1,1,Anchor,0));
+            const double scale=.127;
+            dc.DrawImage(source,new Rect(Anchor-510*scale,48-365*scale,source.PixelWidth*scale,source.PixelHeight*scale));
+            if(right) dc.Pop();
+        }
+        var bitmap=new RenderTargetBitmap(Width,Height,96,96,PixelFormats.Pbgra32); bitmap.Render(visual); bitmap.Freeze(); return bitmap;
+    }
+    private static void ExportWalkReview()
+    {
+        var source=Load("assets/animations/walk-review/whole-cat-left.png");
+        var cells=Enumerable.Range(0,16).Select(i=>
+        {
+            var x=(int)Math.Round(i%4*source.PixelWidth/4.0); var y=(int)Math.Round(i/4*source.PixelHeight/4.0);
+            var right=(int)Math.Round((i%4+1)*source.PixelWidth/4.0); var bottom=(int)Math.Round((i/4+1)*source.PixelHeight/4.0);
+            return Isolate(new CroppedBitmap(source,new Int32Rect(x,y,right-x,bottom-y)));
+        }).ToArray();
+        var first=Bounds(cells[0]); var scale=124/first.Height; var anchor=MassCenterX(cells[0]);
+        var frames=cells.Select(cell=>Draw(cell,anchor,Bounds(cell).Bottom,scale)).ToArray();
+        var folder=Path.Combine(Root,"design/walk-review"); Directory.CreateDirectory(folder);
+        var frameFolder=Path.Combine(Root,"artifacts/walk-review/frames"); Directory.CreateDirectory(frameFolder);
+        void Png(DrawingVisual visual,int width,int height,string path)
+        {
+            var bitmap=new RenderTargetBitmap(width,height,96,96,PixelFormats.Pbgra32); bitmap.Render(visual);
+            var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using var file=File.Create(path); encoder.Save(file);
+        }
+        var atlas=new DrawingVisual(); using(var dc=atlas.RenderOpen())
+            for(var i=0;i<16;i++) dc.DrawImage(frames[i],new Rect(i%4*Width,i/4*Height,Width,Height));
+        var atlasPath=Path.Combine(folder,"atlas-left.png"); Png(atlas,960,960,atlasPath);
+        for(var i=0;i<16;i++)
+        {
+            var stage=new DrawingVisual(); using(var dc=stage.RenderOpen())
+            {
+                dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(255,250,240)),null,new Rect(0,0,520,300));
+                var label=new FormattedText("整图逐帧 · 行走小样",System.Globalization.CultureInfo.GetCultureInfo("zh-CN"),FlowDirection.LeftToRight,new Typeface("Microsoft YaHei UI"),17,Brushes.SaddleBrown,1);
+                dc.DrawText(label,new Point(22,18));
+                dc.DrawLine(new Pen(Brushes.Wheat,1),new Point(24,242),new Point(496,242));
+                dc.DrawImage(frames[i],new Rect(260-Anchor*1.25,242-Foot*1.25,Width*1.25,Height*1.25));
+            }
+            Png(stage,520,300,Path.Combine(frameFolder,$"{i:0000}.png"));
+        }
+        var embedded=Convert.ToBase64String(File.ReadAllBytes(atlasPath));
+        File.WriteAllText(Path.Combine(folder,"index.html"),$$"""
+        <!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>糖豆 · 整图行走小样</title><style>body{background:#f4efdf;color:#4b3a2a;font:16px "Microsoft YaHei UI",sans-serif;margin:32px auto;padding:0 20px;max-width:700px}h1{font-size:24px}canvas{width:100%;height:auto;background:#fffaf0;border-radius:18px;image-rendering:pixelated}button{font:inherit;color:inherit;background:#fff8e8;border:1px solid #cbbd9d;border-radius:9px;padding:8px 16px;margin:12px 8px 0 0;cursor:pointer}p{line-height:1.7}small{color:#796a55}</style>
+        <h1>糖豆 · 整图行走小样</h1><p>每帧均为完整猫图，检查体型、四肢和背带是否连贯。<br><small>16 张动作图；待确认，未替换桌宠。</small></p>
+        <canvas id="view" width="700" height="360"></canvas><div><button id="play">暂停</button><button id="slow">慢放</button><span id="frame"></span></div>
+        <script>const art=new Image();art.src='data:image/png;base64,{{embedded}}';const canvas=document.getElementById('view'),ctx=canvas.getContext('2d');let elapsed=0,last=0,playing=true,speed=1;ctx.imageSmoothingEnabled=false;document.getElementById('play').onclick=e=>{playing=!playing;e.target.textContent=playing?'暂停':'播放'};document.getElementById('slow').onclick=e=>{speed=speed===1?.5:1;e.target.textContent=speed===1?'慢放':'正常速度'};function tick(t){if(last&&playing)elapsed+=Math.min(t-last,100)*speed;last=t;let i=Math.floor(elapsed/60)%16;ctx.clearRect(0,0,700,360);ctx.strokeStyle='#e7d6b5';ctx.beginPath();ctx.moveTo(28,290);ctx.lineTo(672,290);ctx.stroke();if(art.complete&&art.naturalWidth)ctx.drawImage(art,i%4*240,Math.floor(i/4)*240,240,240,350-120*1.55,290-164*1.55,372,372);document.getElementById('frame').textContent=(i+1)+' / 16';requestAnimationFrame(tick)}requestAnimationFrame(tick);</script></html>
+        """);
+        Console.WriteLine("Whole-cat walk review exported; runtime assets unchanged.");
     }
     private static void Save(string name,IReadOnlyList<BitmapSource> frames,int[] durations)
     {

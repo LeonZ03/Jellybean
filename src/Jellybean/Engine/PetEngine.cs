@@ -54,7 +54,7 @@ public sealed class PetEngine
     public double RenderAge => State switch
     {
         PetState.Walk or PetState.ApproachJump => _walkDistance / WalkStride * WalkCycleSeconds,
-        PetState.Stalk => _huntDistance / (WalkStride * .65) * WalkCycleSeconds,
+        PetState.Stalk => _huntDistance / WalkStride * WalkCycleSeconds,
         PetState.Rise => Age + _riseOffset,
         PetState.Fall when Age < .08 => _fallAge,
         PetState.Jump when Age >= TakeoffSeconds => (Age - TakeoffSeconds) / _jumpDuration * .32,
