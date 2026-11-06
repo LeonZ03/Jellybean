@@ -8,7 +8,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-internal static class Program
+internal static partial class Program
 {
     private const int Width=240, Height=240, Foot=164, Anchor=120;
     private static readonly Dictionary<string,object> Clips=new();
@@ -19,6 +19,8 @@ internal static class Program
     private static void Main(string[] args)
     {
         Root=Path.GetFullPath(args.Length>0?args[0]:"."); Output=Path.Combine(Root,"src/Jellybean/Assets"); Directory.CreateDirectory(Output);
+        if(args.Contains("--walk-v4-prepare")) { PrepareWalkV4(); return; }
+        if(args.Contains("--walk-v4-preview")) { PreviewWalkV4(); return; }
         if(args.Contains("--walk-review")) { ExportWalkReview(); return; }
         var body=Load("assets/animations/v2/turnaround.png");
         var regions=new[]{new Int32Rect(130,0,230,486),new Int32Rect(460,0,443,486),new Int32Rect(903,0,633,486),new Int32Rect(12,488,540,536),new Int32Rect(620,488,240,536),new Int32Rect(965,488,500,536)};

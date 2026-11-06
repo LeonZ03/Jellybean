@@ -2,7 +2,7 @@
 
 纪念糖豆的 Windows 二维像素桌宠。离线运行，沿用确认的形象和粉色背带。
 
-当前试用版：**v0.3.1**。已撤掉分件变形，动作暂时恢复完整猫图。[本轮改动](CHANGELOG.md) · [真实步态参考与重画方向](design/walk-review/REFERENCES.md)
+当前试用版：**v0.3.1**。已撤掉分件变形，动作暂时恢复完整猫图。[新行走小样：播放 / 慢放 / 逐帧](design/walk-v4/index.html) · [本轮改动](CHANGELOG.md)
 
 ## 使用
 
