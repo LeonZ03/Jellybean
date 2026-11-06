@@ -113,17 +113,17 @@ internal static partial class Program
         var embedded=Convert.ToBase64String(File.ReadAllBytes(atlasPath));
         File.WriteAllText(Path.Combine(folder,"index.html"),$$"""
         <!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-        <title>糖豆 · 后腿衔接与轻晃</title><style>*{box-sizing:border-box}body{background:#f4efdf;color:#4b3a2a;font:16px "Microsoft YaHei UI",sans-serif;max-width:960px;margin:30px auto;padding:0 20px}h1{font-size:24px}p{line-height:1.7}small{color:#796a55}canvas{display:block;width:100%;height:auto;background:#fffaf0;border-radius:16px}button{font:inherit;color:inherit;background:#fff8e8;border:1px solid #cbbd9d;border-radius:9px;padding:8px 14px;margin:12px 8px 0 0;cursor:pointer}button:focus-visible{outline:3px solid #a96d45;outline-offset:3px}input{width:min(100%,420px);margin:16px 10px 0 0;accent-color:#b97850}label{display:inline-flex;align-items:center;gap:8px}</style>
-        <h1>糖豆 · 后腿衔接与轻晃</h1><p>补上后腿蹬地、收腿、前摆的中间姿势，上身随承重轻微晃动，脚底保持贴地。<br><small>16 个完整猫身关键姿势，64 帧循环、60 fps；待确认的小样。</small></p>
+        <title>糖豆 · 行走检查未通过</title><style>*{box-sizing:border-box}body{background:#f4efdf;color:#4b3a2a;font:16px "Microsoft YaHei UI",sans-serif;max-width:960px;margin:30px auto;padding:0 20px}h1{font-size:24px}p{line-height:1.7}small{color:#796a55}canvas{display:block;width:100%;height:auto;background:#fffaf0;border-radius:16px}button{font:inherit;color:inherit;background:#fff8e8;border:1px solid #cbbd9d;border-radius:9px;padding:8px 14px;margin:12px 8px 0 0;cursor:pointer}button:focus-visible{outline:3px solid #a96d45;outline-offset:3px}input{width:min(100%,420px);margin:16px 10px 0 0;accent-color:#b97850}label{display:inline-flex;align-items:center;gap:8px}</style>
+        <h1>糖豆 · 行走检查未通过</h1><p>本版未通过步态检查：后脚支撑与落点跳变，保留作问题定位。<br><small>16 个关键姿势、64 帧、60 fps；输出条件通过，动作验收未通过。</small></p>
         <canvas id="view" width="920" height="380" aria-label="糖豆行走动画"></canvas>
         <div><button id="play">暂停</button><button id="slow">慢放</button><button id="travel">原地查看</button><button id="next">下一帧</button></div>
         <label>进度 <input id="seek" type="range" min="0" max="63" value="0" aria-label="动画帧"><span id="frame"></span></label>
-        <p><small>检查脚掌是否滑动时，用「向前走」；检查腿部衔接时，用慢放或逐帧。<a href="SOURCES.md">制作依据</a></small></p>
+        <p><small>检查脚掌是否滑动时，用「向前走」；检查腿部衔接时，用慢放或逐帧。<a href="SELF_REVIEW.md">逐帧检查结果</a> · <a href="SOURCES.md">制作记录</a></small></p>
         <script>
         const art=new Image();art.src='data:image/png;base64,{{embedded}}';
         const canvas=document.getElementById('view'),ctx=canvas.getContext('2d'),play=document.getElementById('play'),slow=document.getElementById('slow'),travel=document.getElementById('travel'),seek=document.getElementById('seek');
-        const cycle=64/60*1000,scale=1.65,stride=128;let elapsed=cycle*2,last=0,playing=!matchMedia('(prefers-reduced-motion: reduce)').matches,speed=1,moving=true;ctx.imageSmoothingEnabled=false;
-        function syncPlay(){play.textContent=playing?'暂停':'播放'}syncPlay();
+        const cycle=64/60*1000,scale=1.65,stride=128;let elapsed=cycle*36/64,last=0,playing=false,speed=1,moving=false;ctx.imageSmoothingEnabled=false;
+        function syncPlay(){play.textContent=playing?'暂停':'播放'}syncPlay();travel.textContent='向前走';
         play.onclick=()=>{playing=!playing;syncPlay()};slow.onclick=()=>{speed=speed===1?.35:1;slow.textContent=speed===1?'慢放':'正常速度'};
         travel.onclick=()=>{moving=!moving;elapsed%=cycle;travel.textContent=moving?'原地查看':'向前走'};
         document.getElementById('next').onclick=()=>{playing=false;syncPlay();elapsed=(Math.floor(elapsed/cycle*64)+1)*cycle/64};
