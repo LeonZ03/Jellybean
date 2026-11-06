@@ -1,0 +1,18 @@
+# v0.3 动作素材
+
+2026-11-06，使用内置 imagegen 生成，参考 `../v2/turnaround.png`。原定稿、v2 素材保留。
+
+- `motion-rig.png`：躯干与头、前腿、后腿、细尾巴四个独立部件。离线编排四足接地顺序并生成 60 帧循环，步幅 64 逻辑像素；右向镜像，身体、头、背带和花纹不随帧重画。贴地脚掌的局部位移抵消身体位移。
+- `held.png`：颈后为悬点、四肢与尾巴下垂的桌宠表演姿态。运行时根据拖动速度轻摆。
+
+动作依据：[猫行走的四足接地研究](https://pmc.ncbi.nlm.nih.gov/articles/PMC4044364/)、[Cats Protection 的捕猎行为说明](https://www.cats.org.uk/cats-blog/on-the-prowl)、[猫抱起时的姿态与承托参考](https://www.cats.org.uk/cats-blog/how-to-pick-up-a-cat)。悬垂为动画表现；真实猫的抱持需要承托身体。
+
+## 生成提示词
+
+### motion-rig.png
+
+Use case: identity-preserve. Production asset: a layered 2D skeletal animation rig for the SAME ginger tabby Jellybean cat from the reference. Preserve exact pixel illustration rendering, slender real feline proportions, tall narrow ears, amber plaintive eyes, pink H harness and metal D ring, thin tail. THIS IS A CUTOUT RIG PART SHEET, NOT A WALK CYCLE. True transparent background, no grids/text/shadows/ground. Square sheet divided into FOUR spacious nonoverlapping quadrants, one separate isolated part per quadrant. Top left: complete head+neck+torso side profile facing LEFT, from ear tips to furry underside of chest and belly, hip to right; NO LEGS whatsoever and NO TAIL. Head, harness and torso remain one continuous textured piece; the underside cleanly covers shoulder/hip joints when legs attach behind it. Torso shape and lean body exactly match the reference side cat. Top right: ONE separate FULL FRONT LEG facing left, from rounded shoulder at top to small grounded paw at bottom, nearly vertical relaxed neutral extension, elbow midway, ginger striped fur continuous throughout; no torso/head. Bottom left: ONE separate FULL HIND LEG from round thick upper thigh at top to hock and grounded left-facing paw at bottom, natural subtle backward hock bend, no torso/head. Bottom right: ONE separate thin cat TAIL from rounded root at upper left curving down and right, pale tip, no torso. All FOUR pieces large with roomy transparent margins, no piece touches any other or the canvas boundary. Keep same anatomical texture scale across parts: front leg about half torso+head height, hind leg about half torso+head height, tail about torso length. Uniform clean pixel edges. Aim these parts to assemble invisibly into the same cat.
+
+### held.png
+
+Use case: identity-preserve. Create ONE isolated full-body sprite of the EXACT reference cat Jellybean, for a desktop pet being dragged/lifted by an invisible point behind the neck. Preserve the slender orange tabby identity, amber large plaintive sad eyes, very long narrow upright ears, pink loose H harness with side buckle and metal ring, thin tapering pale-tipped tail, warm detailed pixel-art style. Pose: cat facing three-quarter LEFT, head at top facing viewer slightly, nape of neck is the invisible suspension point. A natural VERTICAL hanging silhouette, torso descending under neck with gravity rather than a horizontal standing pose rotated. Both front legs hang loosely down either side of chest with softly bent wrists and slightly curled paws. Hindquarters lower, two hind legs hanging softly with bent knees and small relaxed paws, long thin tail dangling down along right side with slight soft hook at tip. Body not stretched like rubber, head normal size, paws normal size, no facial distress or injury. Subtle lifted loose fur at nape, NOT a tight collar or hand. NO visible person, NO hand, NO strings or hook, NO extra object, NO floor, NO shadow, NO text. Centered full figure with plenty of genuine transparent margin on all sides, tail and all ears complete. Match the reference's precise pixel painterly fur and harness, keep all body parts correct and recognizable.

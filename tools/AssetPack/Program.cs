@@ -13,7 +13,6 @@ internal static class Program
     private const int Width=240, Height=240, Foot=164, Anchor=120;
     private static readonly Dictionary<string,object> Clips=new();
     private static readonly List<object> Calibration=new();
-    private static readonly List<double> Strides=new();
     private static string Root="", Output="";
 
     [STAThread]
@@ -29,24 +28,16 @@ internal static class Program
             var b=Bounds(views[i]); var s=124/b.Height;
             Save(names[i],new[]{Draw(views[i],(b.Left+b.Right)/2,b.Bottom,s)},new[]{1000});
         }
-        Pack("walk-left",4,3,Enumerable.Repeat(100,12).ToArray());
-        Pack("walk-right",4,3,Enumerable.Repeat(100,12).ToArray());
-        Pack("pounce-left",3,2,new[]{200,160,190,450,170,200});
-        Pack("pounce-right",3,2,new[]{200,160,190,450,170,200});
         Pack("pet",3,2,new[]{380,300,260,280,300,580});
         Pack("perch",3,2,new[]{600,650,300,450,700,700});
         Pack("stretch",3,2,new[]{200,400,500,700,500,500});
         Pack("rest-left",3,2,new[]{100,220,240,300,250,1000},sourceName:"doze");
         Pack("rest-window",3,2,new[]{100,220,240,300,900,900},new[]{405,405,398,324,326,325},"window-rest");
+        var rig=new MotionRig(Load("assets/animations/v3/motion-rig.png"),Isolate);
+        rig.Pack(Save);
+        var held=Isolate(Load("assets/animations/v3/held.png"));
         foreach(var direction in new[]{"left","right"})
-        {
-            var source="pounce-"+direction;
-            Alias("idle-"+direction,"walk-"+direction,new[]{0},new[]{1000});
-            Alias("takeoff-"+direction,source,new[]{0,1,2},new[]{70,90,100});
-            Alias("fall-"+direction,source,new[]{3},new[]{1000});
-            Alias("land-"+direction,source,new[]{4,2,1,0},new[]{90,80,150,180});
-            Alias("jump-"+direction,source,new[]{0,1,2,3,4,0},new[]{70,90,100,600,150,150});
-        }
+            Save("held-"+direction,new[]{MotionRig.Held(held,direction=="right")},new[]{1000});
         Alias("lie-left","rest-left",new[]{0,1,2,3},new[]{100,220,240,300});
         Alias("doze","rest-left",new[]{5,4,5},new[]{2400,220,1800});
         Alias("rise-left","rest-left",new[]{3,2,1,0},new[]{120,200,230,230});
@@ -54,7 +45,7 @@ internal static class Program
         Alias("window-rest","rest-window",new[]{3,4,5,4},new[]{700,900,700,900});
         Alias("window-rise","rest-window",new[]{3,2,1,0},new[]{120,200,230,230});
         var options=new JsonSerializerOptions{WriteIndented=true};
-        File.WriteAllText(Path.Combine(Output,"animations.json"),JsonSerializer.Serialize(new{width=Width,height=Height,anchor=Anchor,foot=Foot,walkStrideLeft=Math.Round(Strides[0],1),walkStrideRight=Math.Round(Strides[1],1),clips=Clips},options));
+        File.WriteAllText(Path.Combine(Output,"animations.json"),JsonSerializer.Serialize(new{width=Width,height=Height,anchor=Anchor,foot=Foot,walkStrideLeft=MotionRig.Stride,walkStrideRight=MotionRig.Stride,clips=Clips},options));
         Directory.CreateDirectory(Path.Combine(Root,"artifacts"));
         File.WriteAllText(Path.Combine(Root,"artifacts/animation-calibration.json"),JsonSerializer.Serialize(Calibration,options));
         ShaderCompiler.Compile(Path.Combine(Root,"src/Jellybean/Shaders/PetMotion.hlsl"),Path.Combine(Output,"pet-motion.ps"));
@@ -98,9 +89,7 @@ internal static class Program
             frames.Add(Draw(cells[i],anchor+padding[i].Left-padding[0].Left,baseline,scale));
         }
         Save(name,frames,durations);
-        double? stride=null;
-        if(name.StartsWith("walk-")) { stride=MeasureStride(cells,scale,name.EndsWith("left"),padding,source.PixelWidth/(double)columns); Strides.Add(stride.Value); }
-        Calibration.Add(new{name,scale,headGap=HeadGap(cells[0])*scale,referenceHeight=first.Height*scale,stride});
+        Calibration.Add(new{name,scale,headGap=HeadGap(cells[0])*scale,referenceHeight=first.Height*scale});
     }
 
     private static byte[] Pixels(BitmapSource bitmap)
@@ -178,31 +167,6 @@ internal static class Program
         { var a=pixels[(y*bitmap.PixelWidth+x)*4+3]; if(a>40) {sum+=x*a;total+=a;} }
         return sum/total;
     }
-    private static double MeasureStride(BitmapSource[] cells,double scale,bool left,(int Left,int Top)[] padding,double cellWidth)
-    {
-        double[] Toes(BitmapSource image)
-        {
-            var p=Pixels(image); var b=Bounds(image); var center=MassCenterX(image);
-            var toes=new List<double>(); int start=-1;
-            for(var x=0;x<image.PixelWidth;x++)
-            {
-                var hit=false;
-                if(left?x<center:x>center)
-                    for(var y=(int)b.Bottom-7;y<b.Bottom;y++) if(p[(y*image.PixelWidth+x)*4+3]>100) { hit=true; break; }
-                if(hit && start<0) start=x;
-                if(!hit && start>=0) { if(x-start>=3) toes.Add((start+x)/2.0); start=-1; }
-            }
-            return toes.ToArray();
-        }
-        var positions=cells.Select((cell,i)=>Toes(cell).Select(x=>x-padding[i].Left).ToArray()).ToArray(); var deltas=new List<double>();
-        for(var i=0;i<cells.Length;i++)
-        {
-            var candidates=positions[i].SelectMany(a=>positions[(i+1)%cells.Length].Select(b=>(left?b-a:a-b)))
-                .Where(d=>d>2 && d<cellWidth*.15).Order().ToArray();
-            if(candidates.Length>0) deltas.Add(candidates[0]);
-        }
-        return deltas.Count>=4?Math.Clamp(deltas.Order().ElementAt(deltas.Count/2)*scale*cells.Length,48,140):90;
-    }
     private static BitmapSource Draw(BitmapSource source,double anchor,double baseline,double scale)
     {
         var visual=new DrawingVisual(); RenderOptions.SetBitmapScalingMode(visual,BitmapScalingMode.HighQuality);
@@ -211,13 +175,14 @@ internal static class Program
     }
     private static void Save(string name,IReadOnlyList<BitmapSource> frames,int[] durations)
     {
-        var visual=new DrawingVisual(); using(var dc=visual.RenderOpen()) for(var i=0;i<frames.Count;i++) dc.DrawImage(frames[i],new Rect(i*Width,0,Width,Height));
-        var atlas=new RenderTargetBitmap(Width*frames.Count,Height,96,96,PixelFormats.Pbgra32); atlas.Render(visual);
+        var columns=Math.Min(8,frames.Count); var rows=(frames.Count+columns-1)/columns;
+        var visual=new DrawingVisual(); using(var dc=visual.RenderOpen()) for(var i=0;i<frames.Count;i++) dc.DrawImage(frames[i],new Rect(i%columns*Width,i/columns*Height,Width,Height));
+        var atlas=new RenderTargetBitmap(Width*columns,Height*rows,96,96,PixelFormats.Pbgra32); atlas.Render(visual);
         var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(atlas)); using(var file=File.Create(Path.Combine(Output,name+".png"))) encoder.Save(file);
-        Clips[name]=new{file=name+".png",frames=Enumerable.Range(0,frames.Count).ToArray(),durations};
+        Clips[name]=new{file=name+".png",columns,frames=Enumerable.Range(0,frames.Count).ToArray(),durations};
     }
     private static void Alias(string name,string source,int[] frames,int[] durations)
-    { var json=JsonSerializer.SerializeToElement(Clips[source]); Clips[name]=new{file=json.GetProperty("file").GetString(),frames,durations}; }
+    { var json=JsonSerializer.SerializeToElement(Clips[source]); Clips[name]=new{file=json.GetProperty("file").GetString(),columns=json.GetProperty("columns").GetInt32(),frames,durations}; }
     private static void MakeIcon(BitmapSource frame)
     {
         var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(frame)); using var stream=new MemoryStream(); encoder.Save(stream); stream.Position=0;

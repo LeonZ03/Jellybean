@@ -57,7 +57,7 @@ public sealed class DesktopSession : IDisposable
         { _pendingReminder=true; _intervalDue=now.AddMinutes(Settings.ReminderMinutes); }
         if(_dailyDue is { } daily && now>=daily)
         { _pendingReminder=true; _dailyDue=daily.AddDays(1); }
-        if(_pendingReminder && _running && Engine.State is not (PetState.Drag or PetState.Jump or PetState.Fall))
+        if(_pendingReminder && _running && Engine.State is not (PetState.Drag or PetState.ApproachJump or PetState.Jump or PetState.Fall))
         { _pendingReminder=false; PreviewReminder(); }
     }
 

@@ -71,9 +71,12 @@ internal static class Program
             Check(engine.State==PetState.Idle,"landing recovers into idle");
             fixture.WindowState=WindowState.Normal; Place(area.Left+180,area.Bottom-300,460,220);
             edge=surfaces.Surfaces.First(s=>s.Window==handle);
-            engine.BeginDrag(); engine.DragTo(edge.Left+210,area.Bottom); engine.EndDrag();
-            Check(engine.JumpToWindow() && engine.State==PetState.Jump,"nearby exposed window can be selected for a jump");
-            for(var i=0;i<25 && engine.State==PetState.Jump;i++) engine.Tick(.06);
+            engine.BeginDrag(); engine.DragTo(Math.Min(area.Right-100,edge.Right+200),area.Bottom); engine.EndDrag();
+            var launchStart=engine.CenterX;
+            Check(engine.JumpToWindow() && engine.State==PetState.ApproachJump,"jump first approaches the takeoff edge on its current support");
+            for(var i=0;i<300 && engine.State==PetState.ApproachJump;i++) engine.Tick(1.0/60);
+            Check(engine.State==PetState.Jump && Math.Abs(engine.CenterX-launchStart)>40,"jump has a visible walking run-up before takeoff");
+            for(var i=0;i<150 && engine.State==PetState.Jump;i++) engine.Tick(1.0/60);
             Check(engine.Support?.Window==handle,"jump finishes attached to the selected live window");
             fixture.WindowStyle=WindowStyle.None;
             var monitor=Win32.GetMonitors()[0].Monitor;
@@ -122,9 +125,8 @@ internal static class Program
         engine.Walk(); var x=engine.CenterX;
         for(var i=0;i<8;i++) engine.Tick(.03);
         Check(Math.Abs(Math.Abs(engine.CenterX-x)-engine.RenderAge/PetEngine.WalkCycleSeconds*engine.WalkStride)<.01,"walk phase follows real distance through acceleration");
-        var pose=engine.Animation; var age=engine.RenderAge;
         engine.BeginDrag(); engine.Tick(.2);
-        Check(engine.Animation==pose && Math.Abs(engine.RenderAge-age)<.001,"drag holds the captured pose and frame");
+        Check(engine.State==PetState.Drag && engine.Animation.StartsWith("held-"),"drag uses a dedicated hanging body pose");
         engine.EndDrag(); engine.Tick(.6); engine.Doze(); engine.Tick(.9);
         Check(engine.State==PetState.Doze,"lying down reaches a breathing rest pose");
         engine.Pet(); Check(engine.State==PetState.Rise,"interaction wakes a resting cat before petting");
@@ -135,6 +137,27 @@ internal static class Program
         Check(engine.Bubble is null,"interaction resets the attention request");
         var tail=sprites.HitMask(sprites.Frame("window-rest",1.5));
         Check(tail.Skip(SpriteCatalog.Width*(SpriteCatalog.Foot+5)).Any(a=>a>100),"window resting pose extends its tail below the support line");
+        engine.BeginDrag(); engine.DragTo(area.Left+area.Width/2,area.Bottom-60); engine.EndDrag();
+        for(var i=0;i<180 && engine.State==PetState.Fall;i++) engine.Tick(1.0/60);
+        Check(engine.State==PetState.Idle,"small drops finish normally without a deep landing animation");
+        engine.BeginDrag(); engine.DragTo(area.Left+area.Width/2,area.Bottom-180); engine.EndDrag();
+        for(var i=0;i<180 && engine.State==PetState.Fall;i++) engine.Tick(1.0/60);
+        Check(engine.State==PetState.Land,"a high fall uses the brief crouched landing"); engine.Tick(.3);
+        engine.ToyPosition=new Point(engine.CenterX+260,engine.FeetY-6); engine.ToggleToy();
+        Check(engine.State==PetState.HuntAim,"wand play reacts immediately with a low aiming posture");
+        var observedStalk=false; var stalkDistance=0.0; var burstSpeed=0.0; var previousX=engine.CenterX;
+        for(var i=0;i<300 && engine.State!=PetState.Catch;i++)
+        {
+            engine.Tick(1.0/60);
+            if(engine.State==PetState.Stalk) { observedStalk=true; stalkDistance+=Math.Abs(engine.CenterX-previousX); }
+            if(engine.State==PetState.Pounce) burstSpeed=Math.Max(burstSpeed,Math.Abs(engine.CenterX-previousX)*60);
+            previousX=engine.CenterX;
+        }
+        Check(observedStalk && stalkDistance>20 && engine.State==PetState.Catch && burstSpeed>250,"wand play stalks first, then bursts forward and recovers quickly"); engine.StopToy();
+        var bubble=new SpeechBubble(); bubble.SetText("喵？",1); var shortSize=bubble.Size;
+        bubble.SetText("陪我玩一会儿，好不好？",1); var normalSize=bubble.Size;
+        bubble.SetText("糖豆想陪你休息一会儿。\n放下手里的工作，陪我玩一下，好不好？",1);
+        Check(shortSize.Width<normalSize.Width && bubble.Size.Height>normalSize.Height && bubble.Size.Width<=260,"speech bubbles fit short text and grow vertically for wrapped text");
     }
 
     private static void CheckRandomWindows(double dpi,Rect area)
@@ -156,7 +179,7 @@ internal static class Program
             for(var n=0;n<8;n++)
             {
                 if(!actor.JumpToWindow(false)) throw new InvalidOperationException("No jump target in three-window scene.");
-                for(var tick=0;tick<100 && actor.State==PetState.Jump;tick++) actor.Tick(.03);
+                for(var tick=0;tick<600 && actor.State is PetState.ApproachJump or PetState.Jump;tick++) actor.Tick(1.0/60);
                 if(actor.Support is { } support) visited.Add(support.Window);
                 actor.Tick(.6);
             }
@@ -185,7 +208,7 @@ internal static class Program
         using(var dc=visual.RenderOpen())
         {
             dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(238,239,227)),null,new Rect(0,0,1200,650));
-            DrawText(dc,"糖豆 Jellybean · v0.2 角色与动作",36,24,24);
+            DrawText(dc,"糖豆 Jellybean · v0.3 角色与动作",36,24,24);
             DrawText(dc,"实际运行素材，按 1.6 倍大小展示",36,60,13);
             var clips=new[]{"walk-left","walk-right","pet","doze","stretch","perch"};
             var labels=new[]{"向左走","向右走","摸摸","打盹","伸懒腰","背身坐坐"};

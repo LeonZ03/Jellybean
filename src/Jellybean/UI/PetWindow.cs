@@ -20,10 +20,11 @@ public sealed class PetWindow : Window
     private readonly SpriteCatalog _sprites;
     private readonly Canvas _root = new() { Width = SpriteCatalog.Width, Height = SpriteCatalog.Height };
     private readonly PetVisual _image = new();
-    private readonly DispatcherTimer _timer = new(DispatcherPriority.Input);
     private readonly DispatcherTimer _clickTimer = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private double _lastTick;
+    private TimeSpan _lastRendering = TimeSpan.MinValue;
+    private bool _rendering;
     private bool _pressing, _dragging, _doubleClick;
     private Point _down, _dragOffset;
     private BitmapSource? _frame;
@@ -48,8 +49,6 @@ public sealed class PetWindow : Window
         Width = SpriteCatalog.Width * settings.Scale; Height = SpriteCatalog.Height * settings.Scale;
         Content = _root; _root.Children.Add(_image);
         RenderOptions.SetBitmapScalingMode(_image, BitmapScalingMode.NearestNeighbor);
-        _timer.Interval = TimeSpan.FromMilliseconds(33);
-        _timer.Tick += (_, _) => Tick();
         _clickTimer.Interval = TimeSpan.FromMilliseconds(System.Windows.Forms.SystemInformation.DoubleClickTime);
         _clickTimer.Tick += (_, _) => { _clickTimer.Stop(); _engine.Pet(); Render(); };
         SourceInitialized += (_, _) =>
@@ -59,7 +58,7 @@ public sealed class PetWindow : Window
             HwndSource.FromHwnd(_handle).AddHook(WindowProc);
             SyncScale(); Render();
         };
-        Closed += (_, _) => { _timer.Stop(); _clickTimer.Stop(); };
+        Closed += (_, _) => { CompositionTarget.Rendering-=OnRendering; _rendering=false; _clickTimer.Stop(); };
     }
 
     private nint WindowProc(nint window, int message, nint wParam, nint lParam, ref bool handled)
@@ -85,17 +84,21 @@ public sealed class PetWindow : Window
         {
             if (!IsVisible) Show();
             _lastTick = _clock.Elapsed.TotalSeconds;
-            _timer.Start(); Render();
+            if (!_rendering) { CompositionTarget.Rendering+=OnRendering; _rendering=true; }
+            Render();
         }
-        else { _timer.Stop(); _clickTimer.Stop(); Hide(); }
+        else { CompositionTarget.Rendering-=OnRendering; _rendering=false; _clickTimer.Stop(); Hide(); }
     }
 
     public void RaiseAboveApps() { if (IsVisible && _settings.Topmost) Win32.RaiseOverlay(_handle); }
 
-    private void Tick()
+    private void OnRendering(object? sender,EventArgs args)
     {
+        var rendering=(RenderingEventArgs)args;
+        if (rendering.RenderingTime==_lastRendering) return;
+        _lastRendering=rendering.RenderingTime;
         var now = _clock.Elapsed.TotalSeconds;
-        var dt = Math.Min(now - _lastTick, .1);
+        var dt = Math.Min(now - _lastTick, .05);
         _lastTick = now;
         if (_dragging && (Win32.GetAsyncKeyState(1) & 0x8000) == 0) EndDrag();
         if (_dragging)
@@ -165,7 +168,11 @@ public sealed class PetWindow : Window
         if (!_pressing) return;
         Win32.GetCursorPos(out var cursor);
         var point = new Point(cursor.X/_dpi,cursor.Y/_dpi);
-        if (!_dragging && (point-_down).Length>6) { _dragging=true; _image.Freeze(); _engine.BeginDrag(); }
+        if (!_dragging && (point-_down).Length>6)
+        {
+            _dragging=true; _engine.BeginDrag();
+            _dragOffset=new Point(0,-(SpriteCatalog.Foot-SpriteCatalog.HeldNapeY)*_settings.Scale);
+        }
         if (_dragging) { _engine.DragTo(point.X-_dragOffset.X,point.Y-_dragOffset.Y); Render(); }
     }
 
@@ -183,7 +190,7 @@ public sealed class PetWindow : Window
     {
         var wasDragging=_dragging; _pressing=false; _dragging=false;
         if (IsMouseCaptured) ReleaseMouseCapture();
-        if (wasDragging) { _engine.BringIntoView(); _engine.EndDrag(); }
+        if (wasDragging) _engine.EndDrag();
     }
 
     protected override void OnLostMouseCapture(System.Windows.Input.MouseEventArgs e) { base.OnLostMouseCapture(e); if (_pressing) EndDrag(); }
