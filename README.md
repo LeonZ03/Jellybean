@@ -4,6 +4,8 @@
 
 当前试用版：**v0.3.1**。已撤掉分件变形，动作暂时恢复完整猫图。新行走小样**未通过步态复核，待重画**：[逐帧检查结果](design/walk-v4/SELF_REVIEW.md) · [问题复现](design/walk-v4/index.html) · [本轮记录](CHANGELOG.md)
 
+行走优化改为从现成、许可明确的完整动作循环出发：[动作对照预览](design/motion-reference/index.html) · [来源与复用方案](design/motion-reference/SOURCES.md)。当前展示的是动作底稿，糖豆外观继续沿用定稿，新小样确认后再替换。
+
 ## 使用
 
 Windows 11，x64。下载免安装压缩包，**完整解压，再双击 `Jellybean.exe`**。运行环境已包含在包内，保留旁边的文件和 `Assets` 文件夹。

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>糖豆 · 现成猫动作参考</title>
+<style>
+  :root { color-scheme: light; --paper:#f6f2e9; --ink:#352d27; --muted:#706357; --line:#ddd1bf; --accent:#77512d; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.6 "Microsoft YaHei",system-ui,sans-serif; }
+  main { max-width:1100px; margin:auto; padding:36px 24px 48px; }
+  h1 { margin:0 0 6px; font-size:28px; } h2 { margin:0; font-size:20px; }
+  p { margin:8px 0 16px; } a { color:var(--accent); text-underline-offset:3px; }
+  .muted { color:var(--muted); } .intro { max-width:780px; }
+  .grid { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:20px; margin-top:24px; }
+  article { min-width:0; padding:22px; border:1px solid var(--line); border-radius:18px; background:#fffdf9; }
+  .stage { background:#f2eadc; border-radius:12px; overflow:hidden; margin:16px 0; }
+  canvas { display:block; width:100%; height:auto; }
+  .pixel-stage { background:#ece6df; }
+  .controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  button, select { min-height:44px; font:inherit; color:var(--ink); padding:7px 12px; border:1px solid var(--line); border-radius:8px; background:white; cursor:pointer; }
+  button[aria-pressed="true"] { background:#eee0ca; border-color:var(--accent); }
+  :focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+  .timeline { display:flex; align-items:center; gap:12px; margin:14px 0; }
+  input[type="range"] { width:100%; min-height:36px; accent-color:var(--accent); }
+  output { white-space:nowrap; min-width:80px; font-variant-numeric:tabular-nums; }
+  .legend { font-size:14px; display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+  .legend[hidden] { display:none; }
+  .legend span::before { content:""; display:inline-block; width:10px; height:10px; margin-right:5px; border-radius:50%; background:var(--dot); }
+  .note { font-size:14px; color:var(--muted); }
+  .next { margin-top:20px; border-left:3px solid #c59a65; padding-left:18px; }
+  @media (max-width:760px) { main { padding:24px 16px; } .grid { grid-template-columns:1fr; } article { padding:18px; } }
+</style>
+<main>
+  <h1>现成猫动作 · 对照预览</h1>
+  <p class="intro muted">先检查动作循环，再适配糖豆定稿。灰色猫和小像素猫都是参考素材；糖豆继续沿用已确认的二维外形、表情和粉色背带。</p>
+  <div class="grid">
+    <article>
+      <h2>连续动作底稿</h2>
+      <p class="muted">Quaternius · CC0 · 原作者 Walking 动作</p>
+      <div class="stage"><canvas id="motion" width="384" height="288" aria-label="原作者猫行走循环，可暂停、慢放或逐帧查看">请使用支持 Canvas 的浏览器查看。</canvas></div>
+      <div class="controls">
+        <button id="play" type="button">暂停</button>
+        <button id="previous" type="button" aria-label="上一帧">上一帧</button>
+        <button id="next" type="button" aria-label="下一帧">下一帧</button>
+        <label for="speed">速度</label>
+        <select id="speed"><option value="1">正常</option><option value="0.3">0.3 倍慢放</option></select>
+        <button id="markers" type="button" aria-pressed="false">四脚轨迹</button>
+      </div>
+      <div class="timeline"><input id="frame" aria-label="行走循环帧" type="range" min="0" max="99" value="0"><output id="counter">1 / 100</output></div>
+      <div class="legend" id="legend" hidden>
+        <span style="--dot:#0a6866">近侧前脚</span><span style="--dot:#087ca9">远侧前脚</span>
+        <span style="--dot:#b04c16">近侧后脚</span><span style="--dot:#86529a">远侧后脚</span>
+      </div>
+      <p class="note">按原动作曲线采样：每周期 1.67 秒、100 帧、60 帧/秒。没有图像补帧，也没有逐帧改大小。轨迹圆点标的是脚部控制点；实心表示接近地面，不能代替脚掌接触判断。</p>
+      <a href="https://opengameart.org/content/animated-animales-low-poly">原作者与下载页</a>
+    </article>
+    <article>
+      <h2>完整像素循环</h2>
+      <p class="muted">Shepardskin · CC0 · 原始走路 / 跑步素材</p>
+      <div class="stage pixel-stage"><canvas id="pixel" width="384" height="288" aria-label="现成像素猫原始动作循环">请使用支持 Canvas 的浏览器查看。</canvas></div>
+      <div class="controls"><label for="pixelAction">动作</label><select id="pixelAction"><option value="walk">走路</option><option value="run">跑步</option></select></div>
+      <p class="note" id="pixelTiming">走路：6 帧，原始 5 帧/秒。</p>
+      <p>用来对照支撑脚、收腿和循环节奏。分辨率很低，适合研究动作，不适合直接替换糖豆的外观。</p>
+      <a href="https://lpc.opengameart.org/content/cat-sprites">原作者与下载页</a>
+      <div class="next">
+        <h2>多角度候选</h2>
+        <p><a href="https://frakassets.itch.io/free-pets-pack">Frakassets Free Pets Pack</a>：橘猫四方向，包含行走、待机、开心和睡觉；CC BY 4.0，使用时署名 Frakassets。</p>
+        <p class="note">已核对页面与许可，原包下载暂受限，尚未逐帧验收。</p>
+      </div>
+    </article>
+  </div>
+  <p class="next">下一步：沿用合适的完整动作循环，统一四脚落点、背线起伏和步幅，再按糖豆定稿做整猫帧。先确认新小样，再接入桌宠。</p>
+  <p class="note">暂停按钮同时控制左右预览；键盘空格暂停，方向键逐帧。<a href="SOURCES.md">素材、许可与制作记录</a></p>
+</main>
+<script>
+  const data = __MOTION_DATA__;
+  const atlas = new Image(); atlas.src = "data:image/png;base64,__MOTION_ATLAS__";
+  const walk = new Image(); walk.src = "data:image/png;base64,__PIXEL_WALK__";
+  const run = new Image(); run.src = "data:image/png;base64,__PIXEL_RUN__";
+  const motion = document.getElementById('motion').getContext('2d');
+  const pixel = document.getElementById('pixel').getContext('2d');
+  const slider = document.getElementById('frame');
+  const play = document.getElementById('play');
+  const markerButton = document.getElementById('markers');
+  const colors = {front_near:'#0a6866', front_far:'#087ca9', hind_near:'#b04c16', hind_far:'#86529a'};
+  let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let showMarkers = false, elapsed = 0, pixelElapsed = 0, rate = 1, previousTime;
+  const cycle = data.frames / data.fps;
+  const getFrame = () => Math.floor(elapsed * data.fps + 1e-7) % data.frames;
+  const setPlaying = (value) => { playing=value; play.textContent=value?'暂停':'播放'; };
+  function draw() {
+    const i = getFrame();
+    motion.clearRect(0,0,384,288);
+    motion.strokeStyle='#d4c7b5'; motion.lineWidth=1;
+    motion.beginPath(); motion.moveTo(0,data.floor); motion.lineTo(384,data.floor); motion.stroke();
+    motion.drawImage(atlas,(i%10)*384,Math.floor(i/10)*288,384,288,0,0,384,288);
+    if (showMarkers) {
+      for (const [name,color] of Object.entries(colors)) {
+        motion.strokeStyle=color; motion.lineWidth=1;
+        motion.beginPath();
+        data.samples.forEach((sample,j) => { const [x,y]=sample.feet[name].pixel; j?motion.lineTo(x,y):motion.moveTo(x,y); });
+        motion.closePath(); motion.stroke();
+        const foot = data.samples[i].feet[name];
+        motion.beginPath(); motion.arc(...foot.pixel,4,0,Math.PI*2);
+        motion.fillStyle=foot.support?color:'#fffdf9'; motion.fill(); motion.lineWidth=2; motion.stroke();
+      }
+    }
+    slider.value=i; document.getElementById('counter').value=`${i+1} / ${data.frames}`;
+    const running=document.getElementById('pixelAction').value==='run';
+    const image=running?run:walk, w=running?80:72, h=running?68:60;
+    const index=Math.floor(pixelElapsed*(running?10:5))%6;
+    pixel.clearRect(0,0,384,288); pixel.imageSmoothingEnabled=false;
+    pixel.drawImage(image,index*w,0,w,h,(384-w*3)/2,288-h*3-20,w*3,h*3);
+  }
+  function step(delta) { setPlaying(false); elapsed=((getFrame()+delta+data.frames)%data.frames)/data.fps; draw(); }
+  play.onclick=()=>setPlaying(!playing);
+  document.getElementById('previous').onclick=()=>step(-1);
+  document.getElementById('next').onclick=()=>step(1);
+  slider.oninput=()=>{setPlaying(false);elapsed=Number(slider.value)/data.fps;draw();};
+  document.getElementById('speed').onchange=e=>{rate=Number(e.target.value);};
+  markerButton.onclick=()=>{showMarkers=!showMarkers;markerButton.setAttribute('aria-pressed',String(showMarkers));document.getElementById('legend').hidden=!showMarkers;draw();};
+  document.getElementById('pixelAction').onchange=e=>{pixelElapsed=0;document.getElementById('pixelTiming').textContent=e.target.value==='run'?'跑步：6 帧，原始 10 帧/秒。':'走路：6 帧，原始 5 帧/秒。';draw();};
+  document.addEventListener('keydown',e=>{
+    if (/INPUT|SELECT|BUTTON/.test(e.target.tagName)) return;
+    if(e.code==='Space'){e.preventDefault();setPlaying(!playing);}
+    if(e.code==='ArrowLeft'){e.preventDefault();step(-1);}
+    if(e.code==='ArrowRight'){e.preventDefault();step(1);}
+  });
+  document.addEventListener('visibilitychange',()=>{previousTime=undefined;});
+  function tick(now) {
+    if(previousTime!==undefined && playing && !document.hidden){const dt=Math.min((now-previousTime)/1000,.1)*rate;elapsed=(elapsed+dt)%cycle;pixelElapsed+=dt;}
+    previousTime=now;draw();requestAnimationFrame(tick);
+  }
+  setPlaying(playing);
+  Promise.all([atlas.decode(),walk.decode(),run.decode()]).then(()=>requestAnimationFrame(tick));
+</script>
+</html>
