@@ -1,10 +1,12 @@
-# 整图行走小样（待确认）
+# 整图行走小样（已否决）
+
+用户反馈步态奇怪；该小样不接入桌宠，仅保留问题对照。后续依据 [真实步态参考与重画方法](../../../design/walk-review/REFERENCES.md) 重做。
 
 2026-11-06，使用内置 imagegen 生成 `whole-cat-left.png`。参考原定稿 `../../character/jellybean-turnaround.png` 与细长耳、委屈眼神版本 `../v2/turnaround.png`。
 
 16 张完整猫图。预览只做整帧裁切、统一缩放和脚底对齐，没有拆分身体或四肢。播放器独立于桌宠；本轮尚未接入正式动画，也不把播放器刷新率当作绘制帧数。
 
-输出：`design/walk-review/index.html` 为自带图片的离线播放器，`walk.gif`、`walk.mp4` 为动画预览。确认外形、体型和步态后再补中间帧。
+输出：`design/walk-review/index.html` 为自带图片的离线播放器，`walk.gif`、`walk.mp4` 为已否决小样的动画记录。
 
 ## 提示词
 
