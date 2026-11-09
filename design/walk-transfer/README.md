@@ -1,6 +1,6 @@
 # 糖豆步态迁移小样
 
-右向步行以毛纹对照视频左侧的 [atlas-sway.png](atlas-sway.png) 为底稿。当前版为[左后爪落地修正](atlas-left-hind-plant.png)。
+右向步行以毛纹对照视频左侧的 [atlas-sway.png](atlas-sway.png) 为底稿。当前版为[原画清晰版](atlas-clear.png)，沿用已确认的左后爪落地动作。
 
 [atlas.png](atlas.png) 是用于确认效果的右向步行图集。每格 240 × 176 像素，4 列 3 行，从左到右、从上到下播放，每帧 100 毫秒。
 
@@ -13,3 +13,5 @@
 [atlas-fur-stable.png](atlas-fur-stable.png) 让背部、肩胯和尾巴的毛纹随原有动作移动，同时平滑四肢亮毛的色调。沿用 12 个姿势及其透明轮廓。对齐身体起伏后，背部选定区域的相邻帧平均色差减少约九成。
 
 [atlas-left-hind-plant.png](atlas-left-hind-plant.png) 修正远侧左后爪悬空。第 3 帧下降，第 4 至 10 帧贴地承重，第 11 帧抬起。贴地期间爪子相对猫身往后移，抵消猫身的前进位移。
+
+[atlas-clear.png](atlas-clear.png) 从原稿一次导出身体轻晃和后爪落地，每格 480 × 352 像素，4 列 3 行，帧序和时长沿用落地修正版。清理透明边缘并保留毛纹、胡须和背带细节。缩回桌面尺寸时，12 帧的轮廓与落地修正版各有超过 99% 的重合。
