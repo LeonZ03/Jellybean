@@ -1,5 +1,7 @@
 # 糖豆步态迁移小样
 
+右向步行定稿选用 [atlas-sway.png](atlas-sway.png)，即毛纹对照视频左侧的版本。
+
 [atlas.png](atlas.png) 是用于确认效果的右向步行图集。每格 240 × 176 像素，4 列 3 行，从左到右、从上到下播放，每帧 100 毫秒。
 
 以 [FrolicForge 的完整步行循环](https://frolicforge.itch.io/cat-animation-high-res) 逐帧限定脚掌位置、关节角度和遮挡关系，再按糖豆的[定稿](../../assets/character/jellybean-turnaround.png)重绘整猫的毛色、五官和粉色 H 背带。导出时统一缩放并清理透明边缘。

@@ -2,7 +2,7 @@
 
 纪念糖豆的 Windows 二维像素桌宠。离线运行，沿用确认的形象和粉色背带。
 
-当前试用版为 **v0.3.1**，沿用完整猫图。新做的[实拍逐帧行走小样](design/walk-v5/README.md)有 16 张独立生成的整猫帧，供确认侧面步态。[此前的步态检查](design/walk-v4/SELF_REVIEW.md) · [更新记录](CHANGELOG.md)
+当前试用版为 **v0.3.1**，沿用完整猫图。后续右向步行已选定[保留身体轻晃的版本](design/walk-transfer/README.md)。[更新记录](CHANGELOG.md)
 
 ## 使用
 
