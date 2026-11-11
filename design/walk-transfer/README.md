@@ -1,6 +1,6 @@
 # 糖豆步态迁移小样
 
-右向步行以毛纹对照视频左侧的 [atlas-sway.png](atlas-sway.png) 为底稿。当前版为[原画清晰版](atlas-clear.png)，沿用已确认的左后爪落地动作。
+右向步行以毛纹对照视频左侧的 [atlas-sway.png](atlas-sway.png) 为底稿。当前小样为[体态微调版](atlas-lean-mild.png)，沿用已确认的左后爪落地动作。[实拍取色](fur-palette.md)单独保存。
 
 [atlas.png](atlas.png) 是用于确认效果的右向步行图集。每格 240 × 176 像素，4 列 3 行，从左到右、从上到下播放，每帧 100 毫秒。
 
