@@ -25,3 +25,5 @@
 [atlas-fur-60-detail.png](atlas-fur-60-detail.png) 保留为旧版对照，毛色为 60 档，使用绘制的短毛纹理和边缘碎毛。
 
 [atlas-fur-50-photo.png](atlas-fur-50-photo.png) 的短毛取自糖豆实拍 8970 中侧腹的局部明暗。毛纹贴着背、侧腹和胸口的走向随身体起伏，保留 50 档底色与原有轮廓。
+
+v0.4.0 使用 [50 档原质感](atlas-fur-50.png) 和[左向图集](atlas-fur-50-left.png)。左向沿用同一步态，背带插扣留在右侧。两边的图集都按统一的脚底线和中心点打包。

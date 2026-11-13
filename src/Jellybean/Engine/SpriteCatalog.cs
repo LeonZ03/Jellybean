@@ -10,7 +10,7 @@ public readonly record struct SpriteSample(BitmapSource From, BitmapSource To, d
 
 public sealed class SpriteCatalog
 {
-    private sealed record Clip(string File,int Columns,int[] Frames, int[] Durations)
+    private sealed record Clip(string File,int Columns,int[] Frames,int[] Durations,int BlendMilliseconds)
     {
         public int Duration { get; } = Durations.Sum();
     }
@@ -35,8 +35,9 @@ public sealed class SpriteCatalog
         {
             var name = entry.Value.GetProperty("file").GetString()!;
             var columns=entry.Value.TryGetProperty("columns",out var columnCount)?columnCount.GetInt32():1;
+            var blend=entry.Value.TryGetProperty("blendMilliseconds",out var blendTime)?blendTime.GetInt32():45;
             _clips[entry.Name] = new Clip(name,columns,entry.Value.GetProperty("frames").EnumerateArray().Select(i=>i.GetInt32()).ToArray(),
-                entry.Value.GetProperty("durations").EnumerateArray().Select(d=>d.GetInt32()).ToArray());
+                entry.Value.GetProperty("durations").EnumerateArray().Select(d=>d.GetInt32()).ToArray(),blend);
         }
     }
 
@@ -52,10 +53,12 @@ public sealed class SpriteCatalog
         {
             if(milliseconds < clip.Durations[i])
             {
+                var frame=LoadFrame(clip,clip.Frames[i]);
+                if(clip.BlendMilliseconds==0 || clip.Frames.Length==1) return new SpriteSample(frame,frame,0);
                 var next=loop?(i+1)%clip.Frames.Length:Math.Min(i+1,clip.Frames.Length-1);
-                var span=Math.Min(45,clip.Durations[i]);
+                var span=Math.Min(clip.BlendMilliseconds,clip.Durations[i]);
                 var blend=Math.Clamp((milliseconds-(clip.Durations[i]-span))/span,0,1);
-                return new SpriteSample(LoadFrame(clip,clip.Frames[i]),LoadFrame(clip,clip.Frames[next]),blend);
+                return new SpriteSample(frame,LoadFrame(clip,clip.Frames[next]),blend);
             }
             milliseconds -= clip.Durations[i];
         }

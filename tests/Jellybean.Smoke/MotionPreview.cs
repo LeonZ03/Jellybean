@@ -42,7 +42,7 @@ internal static class MotionPreview
             var jumper=Actor(windows); PlaceActor(jumper,support.Left+support.Width/2,support.Top);
             var views=Enumerable.Range(0,6).Select(_=>new PetVisual()).ToArray();
             foreach(var view in views) { view.Measure(new Size(240,240)); view.Arrange(new Rect(0,0,240,240)); view.UpdateLayout(); }
-            var labels=new[]{"完整猫图 · 行走暂回旧版","走到边缘 → 提速 → 跳窗","小落差正常站稳 · 高落差缓冲","拎起后自然下垂 · 跟随惯性轻摆","观察 → 慢慢接近 → 扑击","淡黄色气泡 · 按文本调整大小"};
+            var labels=new[]{"糖豆走路 · 毛色 50","走到边缘 → 提速 → 跳窗","小落差正常站稳 · 高落差缓冲","拎起后自然下垂 · 跟随惯性轻摆","观察 → 慢慢接近 → 扑击","淡黄色气泡 · 按文本调整大小"};
             var bubble=new SpeechBubble(); bool walk=false,jump=false,returnJump=false,low=false,high=false,held=false,released=false,hunt=false;
             const int fps=60;
             for(var n=0;n<fps*9;n++)

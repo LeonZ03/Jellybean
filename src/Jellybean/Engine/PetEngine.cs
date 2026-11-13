@@ -7,7 +7,7 @@ public enum PetState { Idle, Walk, LieDown, Doze, Rise, Perch, Pet, Stretch, Fal
 
 public sealed class PetEngine
 {
-    public const double WalkCycleSeconds = .96;
+    public const double WalkCycleSeconds = 1.2;
     private const double TakeoffSeconds = .13;
     private readonly double _leftStride, _rightStride;
     public double WalkStride => Facing < 0 ? _leftStride : _rightStride;

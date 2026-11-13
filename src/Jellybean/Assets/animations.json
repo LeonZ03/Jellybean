@@ -3,8 +3,8 @@
   "height": 240,
   "anchor": 120,
   "foot": 164,
-  "walkStrideLeft": 68.4,
-  "walkStrideRight": 94,
+  "walkStrideLeft": 53.16,
+  "walkStrideRight": 53.16,
   "clips": {
     "front": {
       "file": "front.png",
@@ -84,19 +84,20 @@
         11
       ],
       "durations": [
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80
-      ]
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "blendMilliseconds": 0
     },
     "walk-right": {
       "file": "walk-right.png",
@@ -116,19 +117,20 @@
         11
       ],
       "durations": [
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80
-      ]
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "blendMilliseconds": 0
     },
     "leap-left": {
       "file": "leap-left.png",
@@ -278,7 +280,8 @@
       ],
       "durations": [
         1000
-      ]
+      ],
+      "blendMilliseconds": 0
     },
     "stalk-left": {
       "file": "walk-left.png",
@@ -298,19 +301,20 @@
         11
       ],
       "durations": [
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80
-      ]
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "blendMilliseconds": 0
     },
     "crouch-left": {
       "file": "leap-left.png",
@@ -412,7 +416,8 @@
       ],
       "durations": [
         1000
-      ]
+      ],
+      "blendMilliseconds": 0
     },
     "stalk-right": {
       "file": "walk-right.png",
@@ -432,19 +437,20 @@
         11
       ],
       "durations": [
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80,
-        80
-      ]
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "blendMilliseconds": 0
     },
     "crouch-right": {
       "file": "leap-right.png",

@@ -11,6 +11,8 @@ using System.Windows.Media.Imaging;
 internal static partial class Program
 {
     private const int Width=240, Height=240, Foot=164, Anchor=120;
+    private const double WalkStride=53.16; // 44.3 logical pixels/second for the 1.2-second source cycle.
+    private static readonly int[] WalkDurations=Enumerable.Repeat(100,12).ToArray();
     private static readonly Dictionary<string,object> Clips=new();
     private static readonly List<object> Calibration=new();
     private static string Root="", Output="";
@@ -31,8 +33,8 @@ internal static partial class Program
             var b=Bounds(views[i]); var s=124/b.Height;
             Save(names[i],new[]{Draw(views[i],(b.Left+b.Right)/2,b.Bottom,s)},new[]{1000});
         }
-        Pack("walk-left",4,3,Enumerable.Repeat(80,12).ToArray());
-        Pack("walk-right",4,3,Enumerable.Repeat(80,12).ToArray());
+        PackApprovedWalk("walk-left","design/walk-transfer/atlas-fur-50-left.png");
+        PackApprovedWalk("walk-right","design/walk-transfer/atlas-fur-50.png");
         Pack("leap-left",3,2,Enumerable.Repeat(100,6).ToArray(),sourceName:"pounce-left");
         Pack("leap-right",3,2,Enumerable.Repeat(100,6).ToArray(),sourceName:"pounce-right");
         Pack("pet",3,2,new[]{380,300,260,280,300,580});
@@ -45,7 +47,7 @@ internal static partial class Program
         {
             var source="leap-"+direction;
             Alias("idle-"+direction,"walk-"+direction,new[]{0},new[]{1000});
-            Alias("stalk-"+direction,"walk-"+direction,Enumerable.Range(0,12).ToArray(),Enumerable.Repeat(80,12).ToArray());
+            Alias("stalk-"+direction,"walk-"+direction,Enumerable.Range(0,12).ToArray(),WalkDurations);
             Alias("crouch-"+direction,source,new[]{2},new[]{1000});
             Alias("takeoff-"+direction,source,new[]{0,1,2},new[]{40,45,45});
             Alias("air-"+direction,source,new[]{3},new[]{320});
@@ -62,12 +64,28 @@ internal static partial class Program
         Alias("window-rest","rest-window",new[]{3,4,5,4},new[]{700,900,700,900});
         Alias("window-rise","rest-window",new[]{3,2,1,0},new[]{120,200,230,230});
         var options=new JsonSerializerOptions{WriteIndented=true};
-        File.WriteAllText(Path.Combine(Output,"animations.json"),JsonSerializer.Serialize(new{width=Width,height=Height,anchor=Anchor,foot=Foot,walkStrideLeft=68.4,walkStrideRight=94.0,clips=Clips},options));
+        File.WriteAllText(Path.Combine(Output,"animations.json"),JsonSerializer.Serialize(new{width=Width,height=Height,anchor=Anchor,foot=Foot,walkStrideLeft=WalkStride,walkStrideRight=WalkStride,clips=Clips},options));
         Directory.CreateDirectory(Path.Combine(Root,"artifacts"));
         File.WriteAllText(Path.Combine(Root,"artifacts/animation-calibration.json"),JsonSerializer.Serialize(Calibration,options));
         ShaderCompiler.Compile(Path.Combine(Root,"src/Jellybean/Shaders/PetMotion.hlsl"),Path.Combine(Output,"pet-motion.ps"));
         MakeIcon(Load("src/Jellybean/Assets/front.png"));
         Console.WriteLine($"Packed {Clips.Count} clips; one anatomical scale per sheet, feet fixed at {Foot}.");
+    }
+
+    private static void PackApprovedWalk(string name,string path)
+    {
+        const int columns=4, cellWidth=480, cellHeight=352;
+        var source=Load(path);
+        if(source.PixelWidth!=columns*cellWidth || source.PixelHeight!=3*cellHeight)
+            throw new InvalidDataException($"Unexpected approved walk atlas size: {path}");
+        var frames=Enumerable.Range(0,WalkDurations.Length).Select(i =>
+        {
+            var rect=new Int32Rect(i%columns*cellWidth,i/columns*cellHeight,cellWidth,cellHeight);
+            // Use the same anchor and floor for every frame so the planted paws keep their motion.
+            return Draw(new CroppedBitmap(source,rect),240,314,.5);
+        }).ToArray();
+        Save(name,frames,WalkDurations,blendMilliseconds:0);
+        Calibration.Add(new { name, scale=.5, referenceHeight=124 });
     }
 
     private static BitmapSource Load(string path)
@@ -245,16 +263,26 @@ internal static partial class Program
         """);
         Console.WriteLine("Whole-cat walk review exported; runtime assets unchanged.");
     }
-    private static void Save(string name,IReadOnlyList<BitmapSource> frames,int[] durations)
+    private static void Save(string name,IReadOnlyList<BitmapSource> frames,int[] durations,int? blendMilliseconds=null)
     {
         var columns=Math.Min(8,frames.Count); var rows=(frames.Count+columns-1)/columns;
         var visual=new DrawingVisual(); using(var dc=visual.RenderOpen()) for(var i=0;i<frames.Count;i++) dc.DrawImage(frames[i],new Rect(i%columns*Width,i/columns*Height,Width,Height));
         var atlas=new RenderTargetBitmap(Width*columns,Height*rows,96,96,PixelFormats.Pbgra32); atlas.Render(visual);
         var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(atlas)); using(var file=File.Create(Path.Combine(Output,name+".png"))) encoder.Save(file);
-        Clips[name]=new{file=name+".png",columns,frames=Enumerable.Range(0,frames.Count).ToArray(),durations};
+        var indices=Enumerable.Range(0,frames.Count).ToArray();
+        Clips[name]=blendMilliseconds is int blend
+            ? new {file=name+".png",columns,frames=indices,durations,blendMilliseconds=blend}
+            : new {file=name+".png",columns,frames=indices,durations};
     }
     private static void Alias(string name,string source,int[] frames,int[] durations)
-    { var json=JsonSerializer.SerializeToElement(Clips[source]); Clips[name]=new{file=json.GetProperty("file").GetString(),columns=json.GetProperty("columns").GetInt32(),frames,durations}; }
+    {
+        var json=JsonSerializer.SerializeToElement(Clips[source]);
+        var file=json.GetProperty("file").GetString();
+        var columns=json.GetProperty("columns").GetInt32();
+        Clips[name]=json.TryGetProperty("blendMilliseconds",out var blend)
+            ? new {file,columns,frames,durations,blendMilliseconds=blend.GetInt32()}
+            : new {file,columns,frames,durations};
+    }
     private static void MakeIcon(BitmapSource frame)
     {
         var encoder=new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(frame)); using var stream=new MemoryStream(); encoder.Save(stream); stream.Position=0;
