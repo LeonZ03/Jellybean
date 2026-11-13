@@ -25,7 +25,7 @@ public sealed class PetVisual : FrameworkElement
     {
         var dt=Math.Clamp(engine.AliveTime-_time,0,.1);
         Present(sprites.Sample(engine.Animation, engine.RenderAge, engine.LoopAnimation), engine.Animation, engine.AliveTime, engine.State);
-        var target=engine.State==PetState.Drag?engine.DragSway+Math.Sin(engine.AliveTime*2.4)*.6:0;
+        var target=engine.State==PetState.Drag?engine.DragSway:0;
         _sway+=(target-_sway)*(1-Math.Exp(-dt*18));
         _motion.Sway=_sway*Math.PI/180;
     }
@@ -36,13 +36,15 @@ public sealed class PetVisual : FrameworkElement
     public void Present(SpriteSample sample, string clip, double time, PetState state)
     {
         var dt = Math.Clamp(time - _time, 0, .1); _time = time;
+        RenderOptions.SetBitmapScalingMode(this,sample.From.PixelWidth>SpriteCatalog.Width
+            ? BitmapScalingMode.HighQuality : BitmapScalingMode.NearestNeighbor);
         var targetBreath = state == PetState.Doze ? 1.35 : state is PetState.Walk or PetState.Stalk or PetState.ApproachJump or PetState.Pounce or PetState.Fall or PetState.Jump ? .25 : state==PetState.Drag?.45:1;
         _breathWeight += (targetBreath - _breathWeight) * (1 - Math.Exp(-dt * 8));
         if (clip != _clip)
         {
             _transitionFrom = Capture();
             _clip=clip; _blendStart=time;
-            _blendDuration=state is PetState.Pounce or PetState.Jump or PetState.Catch?.07:state==PetState.Drag?.16:.14;
+            _blendDuration=state is PetState.Pounce or PetState.Jump or PetState.Catch or PetState.Land?.045:state==PetState.Drag?.16:.14;
         }
         var phase=Math.Clamp((time-_blendStart)/Math.Max(.001,_blendDuration),0,1);
         if (_transitionFrom is not null && phase<1)

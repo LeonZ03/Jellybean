@@ -8,7 +8,12 @@ public enum PetState { Idle, Walk, LieDown, Doze, Rise, Perch, Pet, Stretch, Fal
 public sealed class PetEngine
 {
     public const double WalkCycleSeconds = 1.2;
-    private const double TakeoffSeconds = .13;
+    private const double TakeoffSeconds = .26, AirClipSeconds = .32, PounceWindup = .10;
+    private const double FloorLieSeconds = 1.5, WindowLieSeconds = 1.05;
+    private const double FloorRiseSeconds = 1.1, WindowRiseSeconds = .95;
+    private double LieSeconds => _restOnWindow ? WindowLieSeconds : FloorLieSeconds;
+    private double RiseSeconds => _restOnWindow ? WindowRiseSeconds : FloorRiseSeconds;
+    private string Direction => Facing < 0 ? "-left" : "-right";
     private readonly double _leftStride, _rightStride;
     public double WalkStride => Facing < 0 ? _leftStride : _rightStride;
     private readonly Random _random = new();
@@ -54,11 +59,12 @@ public sealed class PetEngine
     public double RenderAge => State switch
     {
         PetState.Walk or PetState.ApproachJump => _walkDistance / WalkStride * WalkCycleSeconds,
-        PetState.Stalk => _huntDistance / WalkStride * WalkCycleSeconds,
+        PetState.Stalk => _huntDistance / 42,
         PetState.Rise => Age + _riseOffset,
         PetState.Fall when Age < .08 => _fallAge,
-        PetState.Jump when Age >= TakeoffSeconds => (Age - TakeoffSeconds) / _jumpDuration * .32,
-        PetState.Pounce => Age < .1 ? Age : .1 + (Age - .1) / _pounceDuration * .28,
+        PetState.Jump when Age >= TakeoffSeconds => (Age - TakeoffSeconds) / _jumpDuration * AirClipSeconds,
+        PetState.Land => Age / _actionDuration * .28,
+        PetState.Pounce => Age < PounceWindup ? Age : PounceWindup + (Age - PounceWindup) / _pounceDuration * .28,
         _ => Age
     };
 
@@ -111,7 +117,7 @@ public sealed class PetEngine
             FeetY = _peekGround + BodyHeight * .5 * PeekFraction;
             if (Age > 4.5) { FeetY = _peekGround; Idle(); }
         }
-        else if (State == PetState.LieDown && Age >= .86) SetState(PetState.Doze, _random.Next(12, 24));
+        else if (State == PetState.LieDown && Age >= LieSeconds) SetState(PetState.Doze, _random.Next(12, 24));
         else if (State == PetState.Doze && Age >= _actionDuration) Rise();
         else if (State == PetState.Rise && Age >= _actionDuration)
         { var action = _afterRise; _afterRise = null; Idle(); action?.Invoke(); }
@@ -173,7 +179,8 @@ public sealed class PetEngine
         {
             CenterX = _jumpEnd.X; FeetY = _jumpEnd.Y; _surfaces.Refresh();
             var drop=FeetY-(_jumpStart.Y-_jumpVelocity*_jumpVelocity/3600);
-            if (_surfaces.Surfaces.Any(s => s.Window == _jumpTarget.Window && s.ContainsX(CenterX) && Math.Abs(s.Top - FeetY) < 5)) LandAt(FeetY, NeedsCushion(drop));
+            if (_surfaces.Surfaces.Any(s => s.Window == _jumpTarget.Window && s.ContainsX(CenterX) && Math.Abs(s.Top - FeetY) < 5))
+                LandAt(FeetY, true, NeedsCushion(drop) ? .28 : .20);
             else Drop();
         }
     }
@@ -273,8 +280,8 @@ public sealed class PetEngine
     }
     private void Rise()
     {
-        _riseOffset=State==PetState.LieDown?.78*(1-Math.Clamp(Age/.86,0,1)):0;
-        SetState(PetState.Rise,.78-_riseOffset);
+        _riseOffset=State==PetState.LieDown?RiseSeconds*(1-Math.Clamp(Age/LieSeconds,0,1)):0;
+        SetState(PetState.Rise,RiseSeconds-_riseOffset);
     }
     private void SetState(PetState state, double duration = 0) { State = state; _angle = null; Age = 0; _actionDuration = duration; }
     public void BeginDrag()
@@ -301,11 +308,11 @@ public sealed class PetEngine
         _fallAnimation = Animation; _fallAge = RenderAge; _fallLoop = LoopAnimation;
         FinishPeek(); _afterRise = null; _support = null; _velocityY = 0; _fallStartY = FeetY; SetState(PetState.Fall);
     }
-    private void LandAt(double top, bool cushion)
+    private void LandAt(double top, bool cushion, double duration = .28)
     {
         FeetY = top; _velocityY = 0;
         Attach(_surfaces.Surfaces.First(s => s.ContainsX(CenterX) && Math.Abs(s.Top - top) < 4));
-        if (cushion) SetState(PetState.Land, .28); else { var action=_afterRise; _afterRise=null; Idle(); action?.Invoke(); }
+        if (cushion) SetState(PetState.Land, duration); else { var action=_afterRise; _afterRise=null; Idle(); action?.Invoke(); }
     }
     private bool NeedsCushion(double height) => height>=110*_settings.Scale;
     private void Attach(Surface support)
@@ -343,7 +350,7 @@ public sealed class PetEngine
         }
         else if (State==PetState.Pounce)
         {
-            var t=Math.Clamp((Age-.1)/_pounceDuration,0,1);
+            var t=Math.Clamp((Age-PounceWindup)/_pounceDuration,0,1);
             var travel=1-Math.Pow(1-t,1.3);
             CenterX=_jumpStart.X+(_jumpEnd.X-_jumpStart.X)*travel;
             FeetY=_jumpStart.Y-Math.Sin(t*Math.PI)*_pounceHeight;
@@ -423,17 +430,17 @@ public sealed class PetEngine
         PetState.Stalk => Facing < 0 ? "stalk-left" : "stalk-right",
         PetState.HuntAim => Facing < 0 ? "crouch-left" : "crouch-right",
         PetState.Catch => Facing < 0 ? "catch-left" : "catch-right",
-        PetState.LieDown => _restOnWindow ? "window-lie" : "lie-left",
-        PetState.Doze => _restOnWindow ? "window-rest" : "doze",
-        PetState.Rise => _restOnWindow ? "window-rise" : "rise-left",
-        PetState.Perch => "perch", PetState.Pet => "pet", PetState.Stretch => "stretch",
+        PetState.LieDown => (_restOnWindow ? "window-lie" : "lie") + Direction,
+        PetState.Doze => (_restOnWindow ? "window-rest" : "doze") + Direction,
+        PetState.Rise => (_restOnWindow ? "window-rise" : "rise") + Direction,
+        PetState.Perch => "perch", PetState.Pet => "pet", PetState.Stretch => "stretch" + Direction,
         PetState.Pounce => Facing < 0 ? "pounce-left" : "pounce-right",
         PetState.Land => Facing < 0 ? "land-left" : "land-right",
         PetState.Jump when Age < TakeoffSeconds => Facing < 0 ? "takeoff-left" : "takeoff-right",
         PetState.Jump => Facing < 0 ? "air-left" : "air-right",
         PetState.Fall when Age < .08 => _fallAnimation,
         PetState.Fall => Facing < 0 ? "fall-left" : "fall-right",
-        PetState.Peek => "pet", PetState.Drag => Facing<0?"held-left":"held-right",
+        PetState.Peek => "peek", PetState.Drag => Facing<0?"held-left":"held-right",
         _ => Facing < 0 ? "idle-left" : "idle-right"
     });
 }

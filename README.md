@@ -2,11 +2,11 @@
 
 纪念糖豆的 Windows 二维像素桌宠。离线运行，沿用确认的形象和粉色背带。
 
-当前试用版为 **v0.4.1**。走路、跳扑、趴卧、伸展、摸摸、拖拽和六个视角统一到 50 档原质感毛色。[更新记录](CHANGELOG.md)
+当前试用版为 **v0.5.0**。已接入确认过的八组高清动作，沿用 50 档原质感毛色和原来的走路动画。[更新记录](CHANGELOG.md)
 
 ## 使用
 
-Windows 11，x64。下载免安装压缩包，**完整解压，再双击 `Jellybean.exe`**。运行环境已包含在包内，保留旁边的文件和 `Assets` 文件夹。
+Windows 11，x64。先从托盘退出旧版，再双击新版目录中的 `Jellybean.exe`。运行环境已包含在目录内，保留旁边的文件和 `Assets` 文件夹。
 
 | 操作 | 效果 |
 | --- | --- |
@@ -35,7 +35,7 @@ C# / WPF，.NET 10 SDK。复用 PixelPaws 的窗口识别、落地数学、显�
 ```powershell
 ./scripts/build.ps1                  # 编译
 ./scripts/build.ps1 -Check           # 一次关键功能检查
-./scripts/build.ps1 -Package         # 生成自带运行环境的免安装包
+./scripts/build.ps1 -Publish         # 输出可直接运行的 Jellybean.exe 和随附文件
 ```
 
 [功能表](REQUIREMENTS.md) · [形象与动画小样](demo/index.html) · [功能示意](design/features/index.html)

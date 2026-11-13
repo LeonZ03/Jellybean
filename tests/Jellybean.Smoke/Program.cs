@@ -92,13 +92,15 @@ internal static class Program
             var sprites=new SpriteCatalog();
             MotionPreview.CheckRenderer(sprites);
             Check(true,"breathing changes rendered pixels and pose blending retains solid alpha");
-            foreach(var clip in new[]{"front","walk-left","walk-right","pounce-left","pounce-right","doze","pet","perch","stretch","rear"})
+            foreach(var clip in new[]{"front","walk-left","walk-right","pounce-left","pounce-right","doze-left","pet","perch","stretch-right","rear"})
             {
                 var frame=sprites.Frame(clip,.8);
-                Check(frame.PixelWidth==SpriteCatalog.Width && frame.PixelHeight==SpriteCatalog.Height && frame.IsFrozen,$"{clip} atlas decodes at runtime size");
-                var converted=new FormatConvertedBitmap(frame,PixelFormats.Bgra32,null,0);
-                var pixels=new byte[SpriteCatalog.Width*SpriteCatalog.Height*4]; converted.CopyPixels(pixels,SpriteCatalog.Width*4,0);
-                Check(pixels[3]==0 && pixels[^1]==0,$"{clip} corners are truly transparent");
+                var scale=clip is "front" or "walk-left" or "walk-right" or "rear" ? 1 : 2;
+                Check(frame.PixelWidth==SpriteCatalog.Width*scale && frame.PixelHeight==SpriteCatalog.Height*scale && frame.IsFrozen,
+                    $"{clip} atlas decodes at its expected resolution");
+                var mask=sprites.HitMask(frame);
+                Check(mask.Length==SpriteCatalog.Width*SpriteCatalog.Height && mask[0]==0 && mask[^1]==0,
+                    $"{clip} hit mask uses logical size with transparent corners");
             }
             engine.Remind();
             for(var tick=0;tick<100 && engine.Bubble is null;tick++) engine.Tick(.03);
@@ -127,15 +129,15 @@ internal static class Program
         Check(Math.Abs(Math.Abs(engine.CenterX-x)-engine.RenderAge/PetEngine.WalkCycleSeconds*engine.WalkStride)<.01,"walk phase follows real distance through acceleration");
         engine.BeginDrag(); engine.Tick(.2);
         Check(engine.State==PetState.Drag && engine.Animation.StartsWith("held-"),"drag uses a dedicated hanging body pose");
-        engine.EndDrag(); engine.Tick(.6); engine.Doze(); engine.Tick(.9);
+        engine.EndDrag(); engine.Tick(.6); engine.Doze(); engine.Tick(1.6);
         Check(engine.State==PetState.Doze,"lying down reaches a breathing rest pose");
         engine.Pet(); Check(engine.State==PetState.Rise,"interaction wakes a resting cat before petting");
-        engine.Tick(.8); Check(engine.State==PetState.Pet,"wake transition completes the requested interaction");
+        engine.Tick(1.2); Check(engine.State==PetState.Pet,"wake transition completes the requested interaction");
         engine.Idle(); engine.Tick(181);
         Check(engine.Bubble?.Contains("陪我玩")==true,"long inactivity requests a little play");
         engine.Interact(); engine.Idle(); engine.Tick(20);
         Check(engine.Bubble is null,"interaction resets the attention request");
-        var tail=sprites.HitMask(sprites.Frame("window-rest",1.5));
+        var tail=sprites.HitMask(sprites.Frame("window-rest-left",1.5));
         Check(tail.Skip(SpriteCatalog.Width*(SpriteCatalog.Foot+5)).Any(a=>a>100),"window resting pose extends its tail below the support line");
         engine.BeginDrag(); engine.DragTo(area.Left+area.Width/2,area.Bottom-60); engine.EndDrag();
         for(var i=0;i<180 && engine.State==PetState.Fall;i++) engine.Tick(1.0/60);
@@ -211,7 +213,7 @@ internal static class Program
             var version=typeof(SpriteCatalog).Assembly.GetName().Version!.ToString(3);
             DrawText(dc,$"糖豆 Jellybean · v{version} 角色与动作",36,24,24);
             DrawText(dc,"实际运行素材，按 1.6 倍大小展示",36,60,13);
-            var clips=new[]{"walk-left","walk-right","pet","doze","stretch","perch"};
+            var clips=new[]{"walk-left","walk-right","pet","doze-left","stretch-left","perch"};
             var labels=new[]{"向左走","向右走","摸摸","打盹","伸懒腰","背身坐坐"};
             for(var i=0;i<clips.Length;i++)
             {

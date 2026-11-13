@@ -48,7 +48,6 @@ public sealed class PetWindow : Window
         Topmost = settings.Topmost;
         Width = SpriteCatalog.Width * settings.Scale; Height = SpriteCatalog.Height * settings.Scale;
         Content = _root; _root.Children.Add(_image);
-        RenderOptions.SetBitmapScalingMode(_image, BitmapScalingMode.NearestNeighbor);
         _clickTimer.Interval = TimeSpan.FromMilliseconds(System.Windows.Forms.SystemInformation.DoubleClickTime);
         _clickTimer.Tick += (_, _) => { _clickTimer.Stop(); _engine.Pet(); Render(); };
         SourceInitialized += (_, _) =>

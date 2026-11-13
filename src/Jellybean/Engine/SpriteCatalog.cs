@@ -10,14 +10,14 @@ public readonly record struct SpriteSample(BitmapSource From, BitmapSource To, d
 
 public sealed class SpriteCatalog
 {
-    private sealed record Clip(string File,int Columns,int[] Frames,int[] Durations,int BlendMilliseconds)
+    private sealed record Clip(string File,int Columns,int[] Frames,int[] Durations,int BlendMilliseconds,int Scale,bool Mirror)
     {
         public int Duration { get; } = Durations.Sum();
     }
 
     private readonly Dictionary<string, Clip> _clips = new();
     private readonly Dictionary<BitmapSource, byte[]> _hitMasks = new();
-    private readonly Dictionary<(string File,int Frame),BitmapSource> _frames = new();
+    private readonly Dictionary<(string File,int Frame,bool Mirror),BitmapSource> _frames = new();
     private readonly Dictionary<string,(BitmapImage Image,long Used)> _atlases = new();
     private long _used;
     private const int AtlasCacheSize=3;
@@ -36,8 +36,10 @@ public sealed class SpriteCatalog
             var name = entry.Value.GetProperty("file").GetString()!;
             var columns=entry.Value.TryGetProperty("columns",out var columnCount)?columnCount.GetInt32():1;
             var blend=entry.Value.TryGetProperty("blendMilliseconds",out var blendTime)?blendTime.GetInt32():45;
+            var scale=entry.Value.TryGetProperty("scale",out var frameScale)?frameScale.GetInt32():1;
+            var mirror=entry.Value.TryGetProperty("mirror",out var reflected)&&reflected.GetBoolean();
             _clips[entry.Name] = new Clip(name,columns,entry.Value.GetProperty("frames").EnumerateArray().Select(i=>i.GetInt32()).ToArray(),
-                entry.Value.GetProperty("durations").EnumerateArray().Select(d=>d.GetInt32()).ToArray(),blend);
+                entry.Value.GetProperty("durations").EnumerateArray().Select(d=>d.GetInt32()).ToArray(),blend,scale,mirror);
         }
     }
 
@@ -73,29 +75,39 @@ public sealed class SpriteCatalog
             {
                 var oldest=_atlases.MinBy(a=>a.Value.Used).Key;
                 _atlases.Remove(oldest);
-                foreach(var key in _frames.Keys.Where(k=>k.File==oldest).ToArray())
-                { _hitMasks.Remove(_frames[key]); _frames.Remove(key); }
+                foreach(var retired in _frames.Keys.Where(k=>k.File==oldest).ToArray())
+                { _hitMasks.Remove(_frames[retired]); _frames.Remove(retired); }
             }
             var image=new BitmapImage(); image.BeginInit(); image.CacheOption=BitmapCacheOption.OnLoad;
             image.UriSource=new Uri(Path.Combine(AppContext.BaseDirectory,"Assets",clip.File)); image.EndInit(); image.Freeze();
             atlas=(image,0);
         }
         _atlases[clip.File]=(atlas.Image,++_used);
-        if (_frames.TryGetValue((clip.File,index),out var cached)) return cached;
-        var frame=new CroppedBitmap(atlas.Image,new Int32Rect(index%clip.Columns*Width,index/clip.Columns*Height,Width,Height));
-        frame.Freeze(); _frames[(clip.File,index)]=frame; return frame;
+        var key=(clip.File,index,clip.Mirror);
+        if (_frames.TryGetValue(key,out var cached)) return cached;
+        var w=Width*clip.Scale; var h=Height*clip.Scale;
+        BitmapSource frame=new CroppedBitmap(atlas.Image,new Int32Rect(index%clip.Columns*w,index/clip.Columns*h,w,h));
+        frame.Freeze();
+        if(clip.Mirror)
+        {
+            frame=new TransformedBitmap(frame,new ScaleTransform(-1,1));
+            frame.Freeze();
+        }
+        return _frames[key]=frame;
     }
 
     public byte[] HitMask(BitmapSource frame)
     {
         if (_hitMasks.TryGetValue(frame,out var mask)) return mask;
-        var bgra = new FormatConvertedBitmap(frame,PixelFormats.Bgra32,null,0);
+        var logical = frame.PixelWidth==Width ? frame :
+            new TransformedBitmap(frame,new ScaleTransform(Width/(double)frame.PixelWidth,Height/(double)frame.PixelHeight));
+        var bgra = new FormatConvertedBitmap(logical,PixelFormats.Bgra32,null,0);
         var bytes = new byte[Width*Height*4];
         bgra.CopyPixels(bytes,Width*4,0);
         mask = new byte[Width*Height];
         for(var i=0;i<mask.Length;i++) mask[i]=bytes[i*4+3];
         // A grabbed pose is a temporary snapshot; atlas masks are the reusable ones.
-        if(frame is CroppedBitmap) _hitMasks.Add(frame,mask);
+        if(frame is CroppedBitmap or TransformedBitmap) _hitMasks.Add(frame,mask);
         return mask;
     }
 }
