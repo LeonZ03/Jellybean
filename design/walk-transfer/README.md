@@ -1,6 +1,6 @@
 # 糖豆步态迁移小样
 
-右向步行以毛纹对照视频左侧的 [atlas-sway.png](atlas-sway.png) 为底稿。当前小样沿用[体态微调版](atlas-lean-mild.png)的步态，毛色选定为 [60 档](atlas-fur-60.png)。[实拍取色](fur-palette.md)单独保存。
+右向步行以毛纹对照视频左侧的 [atlas-sway.png](atlas-sway.png) 为底稿。当前小样沿用[体态微调版](atlas-lean-mild.png)的步态，毛色选定为 [50 档](atlas-fur-50.png)。[实拍取色](fur-palette.md)单独保存。
 
 [atlas.png](atlas.png) 是用于确认效果的右向步行图集。每格 240 × 176 像素，4 列 3 行，从左到右、从上到下播放，每帧 100 毫秒。
 
@@ -22,4 +22,6 @@
 
 [毛色滑条](fur-slider.html)用 0–100 比较同一套走路动作。0 对应体态微调版的原色，100 对应已撤销的照片校色版。中间档位逐像素混合两端的颜色。
 
-[atlas-fur-60-detail.png](atlas-fur-60-detail.png) 是短毛质感小样。背毛往后贴，胸毛往下长，背线和胸口边缘保留细碎短毛。同一份纹理随 12 帧身体起伏移动，底色沿用 60 档，脚爪像素保持一致。
+[atlas-fur-60-detail.png](atlas-fur-60-detail.png) 保留为旧版对照，毛色为 60 档，使用绘制的短毛纹理和边缘碎毛。
+
+[atlas-fur-50-photo.png](atlas-fur-50-photo.png) 的短毛取自糖豆实拍 8970 中侧腹的局部明暗。毛纹贴着背、侧腹和胸口的走向随身体起伏，保留 50 档底色与原有轮廓。
