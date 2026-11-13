@@ -24,6 +24,8 @@ internal static partial class Program
         if(args.Contains("--walk-v4-prepare")) { PrepareWalkV4(); return; }
         if(args.Contains("--walk-v4-preview")) { PreviewWalkV4(); return; }
         if(args.Contains("--walk-review")) { ExportWalkReview(); return; }
+        var walkLeft=PackApprovedWalk("walk-left","design/walk-transfer/atlas-fur-50-left.png");
+        var walkRight=PackApprovedWalk("walk-right","design/walk-transfer/atlas-fur-50.png");
         var body=Load("assets/animations/v2/turnaround.png");
         var regions=new[]{new Int32Rect(130,0,230,486),new Int32Rect(460,0,443,486),new Int32Rect(903,0,633,486),new Int32Rect(12,488,540,536),new Int32Rect(620,488,240,536),new Int32Rect(965,488,500,536)};
         var views=regions.Select(r=>Isolate(new CroppedBitmap(body,r))).ToArray();
@@ -31,18 +33,22 @@ internal static partial class Program
         for(var i=0;i<views.Length;i++)
         {
             var b=Bounds(views[i]); var s=124/b.Height;
-            Save(names[i],new[]{Draw(views[i],(b.Left+b.Right)/2,b.Bottom,s)},new[]{1000});
+            var side=i==2 || i==3;
+            var xOffset=i==2?-4:i==3?4:0;
+            Save(names[i],new[]{Draw(CoatPalette.MatchWalk(views[i]),(b.Left+b.Right)/2,b.Bottom,s,side?1.06:1,xOffset)},new[]{1000});
         }
-        PackApprovedWalk("walk-left","design/walk-transfer/atlas-fur-50-left.png");
-        PackApprovedWalk("walk-right","design/walk-transfer/atlas-fur-50.png");
-        Pack("leap-left",3,2,Enumerable.Repeat(100,6).ToArray(),sourceName:"pounce-left");
-        Pack("leap-right",3,2,Enumerable.Repeat(100,6).ToArray(),sourceName:"pounce-right");
+        Pack("leap-left",3,2,Enumerable.Repeat(100,6).ToArray(),sourceName:"pounce-left",
+            standing:walkLeft,horizontalScale:1.08,xOffset:-7,endsStanding:true);
+        Pack("leap-right",3,2,Enumerable.Repeat(100,6).ToArray(),sourceName:"pounce-right",
+            standing:walkRight,horizontalScale:1.08,xOffset:8,endsStanding:true);
         Pack("pet",3,2,new[]{380,300,260,280,300,580});
         Pack("perch",3,2,new[]{600,650,300,450,700,700});
-        Pack("stretch",3,2,new[]{200,400,500,700,500,500});
-        Pack("rest-left",3,2,new[]{100,220,240,300,250,1000},sourceName:"doze");
-        Pack("rest-window",3,2,new[]{100,220,240,300,900,900},new[]{405,405,398,324,326,325},"window-rest");
-        var held=Isolate(Load("assets/animations/v3/held.png"));
+        Pack("stretch",3,2,new[]{200,400,500,700,500,500},standing:walkLeft,endsStanding:true);
+        Pack("rest-left",3,2,new[]{100,220,240,300,250,1000},sourceName:"doze",
+            standing:walkLeft,horizontalScale:1.06,xOffset:-6);
+        Pack("rest-window",3,2,new[]{100,220,240,300,900,900},new[]{405,405,398,324,326,325},"window-rest",
+            standing:walkLeft,horizontalScale:1.04,xOffset:-4);
+        var held=CoatPalette.MatchWalk(Isolate(Load("assets/animations/v3/held.png")));
         foreach(var direction in new[]{"left","right"})
         {
             var source="leap-"+direction;
@@ -72,7 +78,7 @@ internal static partial class Program
         Console.WriteLine($"Packed {Clips.Count} clips; one anatomical scale per sheet, feet fixed at {Foot}.");
     }
 
-    private static void PackApprovedWalk(string name,string path)
+    private static BitmapSource PackApprovedWalk(string name,string path)
     {
         const int columns=4, cellWidth=480, cellHeight=352;
         var source=Load(path);
@@ -86,6 +92,7 @@ internal static partial class Program
         }).ToArray();
         Save(name,frames,WalkDurations,blendMilliseconds:0);
         Calibration.Add(new { name, scale=.5, referenceHeight=124 });
+        return frames[0];
     }
 
     private static BitmapSource Load(string path)
@@ -97,7 +104,8 @@ internal static partial class Program
         var clean=BitmapSource.Create(converted.PixelWidth,converted.PixelHeight,96,96,PixelFormats.Bgra32,null,pixels,converted.PixelWidth*4); clean.Freeze(); return clean;
     }
 
-    private static void Pack(string name,int columns,int rows,int[] durations,int[]? baselines=null,string? sourceName=null)
+    private static void Pack(string name,int columns,int rows,int[] durations,int[]? baselines=null,string? sourceName=null,
+        BitmapSource? standing=null,double horizontalScale=1,double xOffset=0,bool endsStanding=false)
     {
         var source=Load("assets/animations/v2/"+(sourceName??name)+".png");
         var padding=new (int Left,int Top)[columns*rows];
@@ -121,7 +129,11 @@ internal static partial class Program
         {
             var b=Bounds(cells[i]);
             var baseline=baselines is null?b.Bottom:baselines[i]+padding[i].Top;
-            frames.Add(Draw(cells[i],anchor+padding[i].Left-padding[0].Left,baseline,scale));
+            if(standing is not null && (i==0 || endsStanding && i==cells.Length-1))
+                frames.Add(standing);
+            else
+                frames.Add(Draw(CoatPalette.MatchWalk(cells[i]),anchor+padding[i].Left-padding[0].Left,
+                    baseline,scale,horizontalScale,xOffset));
         }
         Save(name,frames,durations);
         Calibration.Add(new{name,scale,headGap=HeadGap(cells[0])*scale,referenceHeight=first.Height*scale});
@@ -202,10 +214,11 @@ internal static partial class Program
         { var a=pixels[(y*bitmap.PixelWidth+x)*4+3]; if(a>40) {sum+=x*a;total+=a;} }
         return sum/total;
     }
-    private static BitmapSource Draw(BitmapSource source,double anchor,double baseline,double scale)
+    private static BitmapSource Draw(BitmapSource source,double anchor,double baseline,double scale,double horizontalScale=1,double xOffset=0)
     {
         var visual=new DrawingVisual(); RenderOptions.SetBitmapScalingMode(visual,BitmapScalingMode.HighQuality);
-        using(var dc=visual.RenderOpen()) dc.DrawImage(source,new Rect(Anchor-anchor*scale,Foot-baseline*scale,source.PixelWidth*scale,source.PixelHeight*scale));
+        var xScale=scale*horizontalScale;
+        using(var dc=visual.RenderOpen()) dc.DrawImage(source,new Rect(Anchor+xOffset-anchor*xScale,Foot-baseline*scale,source.PixelWidth*xScale,source.PixelHeight*scale));
         var bitmap=new RenderTargetBitmap(Width,Height,96,96,PixelFormats.Pbgra32); bitmap.Render(visual); bitmap.Freeze(); return bitmap;
     }
     private static BitmapSource Held(BitmapSource source,bool right)

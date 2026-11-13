@@ -6,66 +6,6 @@
   "walkStrideLeft": 53.16,
   "walkStrideRight": 53.16,
   "clips": {
-    "front": {
-      "file": "front.png",
-      "columns": 1,
-      "frames": [
-        0
-      ],
-      "durations": [
-        1000
-      ]
-    },
-    "front-three-quarter": {
-      "file": "front-three-quarter.png",
-      "columns": 1,
-      "frames": [
-        0
-      ],
-      "durations": [
-        1000
-      ]
-    },
-    "left-view": {
-      "file": "left-view.png",
-      "columns": 1,
-      "frames": [
-        0
-      ],
-      "durations": [
-        1000
-      ]
-    },
-    "right-view": {
-      "file": "right-view.png",
-      "columns": 1,
-      "frames": [
-        0
-      ],
-      "durations": [
-        1000
-      ]
-    },
-    "rear": {
-      "file": "rear.png",
-      "columns": 1,
-      "frames": [
-        0
-      ],
-      "durations": [
-        1000
-      ]
-    },
-    "rear-three-quarter": {
-      "file": "rear-three-quarter.png",
-      "columns": 1,
-      "frames": [
-        0
-      ],
-      "durations": [
-        1000
-      ]
-    },
     "walk-left": {
       "file": "walk-left.png",
       "columns": 8,
@@ -131,6 +71,66 @@
         100
       ],
       "blendMilliseconds": 0
+    },
+    "front": {
+      "file": "front.png",
+      "columns": 1,
+      "frames": [
+        0
+      ],
+      "durations": [
+        1000
+      ]
+    },
+    "front-three-quarter": {
+      "file": "front-three-quarter.png",
+      "columns": 1,
+      "frames": [
+        0
+      ],
+      "durations": [
+        1000
+      ]
+    },
+    "left-view": {
+      "file": "left-view.png",
+      "columns": 1,
+      "frames": [
+        0
+      ],
+      "durations": [
+        1000
+      ]
+    },
+    "right-view": {
+      "file": "right-view.png",
+      "columns": 1,
+      "frames": [
+        0
+      ],
+      "durations": [
+        1000
+      ]
+    },
+    "rear": {
+      "file": "rear.png",
+      "columns": 1,
+      "frames": [
+        0
+      ],
+      "durations": [
+        1000
+      ]
+    },
+    "rear-three-quarter": {
+      "file": "rear-three-quarter.png",
+      "columns": 1,
+      "frames": [
+        0
+      ],
+      "durations": [
+        1000
+      ]
     },
     "leap-left": {
       "file": "leap-left.png",
