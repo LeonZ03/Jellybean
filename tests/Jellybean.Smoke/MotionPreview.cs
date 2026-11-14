@@ -129,6 +129,45 @@ internal static class MotionPreview
         view.Present(sprites.Frame("pet",0),"pet",2.58,PetState.Pet); view.UpdateLayout();
         var blend=Bytes(view.Capture()!);
         if(!Enumerable.Range(0,240*240).Any(i=>blend[i*4+3]>=253)) throw new InvalidOperationException("Pose blending reduced the solid body alpha.");
+
+        foreach (var clip in new[] { "doze-right", "doze-left", "window-rest-right" })
+        {
+            var rest = new PetVisual();
+            rest.Measure(new Size(240,240)); rest.Arrange(new Rect(0,0,240,240));
+            var pose = sprites.Frame(clip, 0);
+            rest.Present(pose, clip, 0, PetState.Doze); rest.UpdateLayout();
+            var exhale = Bytes(rest.Capture()!);
+            rest.Present(pose, clip, 1.9, PetState.Doze); rest.UpdateLayout();
+            var inhale = Bytes(rest.Capture()!);
+            const int stride = 240 * 4;
+            var torso = 100 * stride;
+            var pawLine = 161 * stride;
+            if (exhale.AsSpan(torso, pawLine-torso).SequenceEqual(inhale.AsSpan(torso, pawLine-torso)) ||
+                !exhale.AsSpan(pawLine).SequenceEqual(inhale.AsSpan(pawLine)))
+                throw new InvalidOperationException($"Breathing must move the ribs and keep the support line fixed in {clip}.");
+        }
+
+        var held = new PetVisual();
+        held.Measure(new Size(240,240)); held.Arrange(new Rect(0,0,240,240));
+        held.Present(sprites.Frame("held-right",0),"held-right",0,PetState.Drag); held.UpdateLayout();
+        var neutral = Bytes(held.Capture()!);
+        ((PetMotionEffect)held.Effect).Sway = new Point(-7,0);
+        var trailing = Bytes(held.Capture()!);
+        double TailX(byte[] pixels)
+        {
+            var weight = 0; var total = 0;
+            for (var y = 137; y < 158; y++)
+                for (var x = 0; x < 240; x++)
+                {
+                    var alpha = pixels[(y * 240 + x) * 4 + 3];
+                    weight += alpha;
+                    total += alpha * x;
+                }
+            return (double)total / weight;
+        }
+        if (!neutral.AsSpan(0,SpriteCatalog.HeldNapeY * 240 * 4).SequenceEqual(trailing.AsSpan(0,SpriteCatalog.HeldNapeY * 240 * 4)) ||
+            !(TailX(neutral) - TailX(trailing) > 5))
+            throw new InvalidOperationException("The hanging body must sway in the requested direction around a fixed grip.");
     }
     private static byte[] Bytes(BitmapSource frame)
     { var pixels=new byte[240*240*4]; new FormatConvertedBitmap(frame,PixelFormats.Bgra32,null,0).CopyPixels(pixels,240*4,0); return pixels; }

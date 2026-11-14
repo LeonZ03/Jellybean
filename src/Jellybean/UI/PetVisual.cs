@@ -7,11 +7,25 @@ namespace Jellybean.UI;
 
 public sealed class PetVisual : FrameworkElement
 {
+    private readonly record struct Breathing(double X, double Y, double Width, double Height, double Depth)
+    {
+        public static Breathing Blend(Breathing from, Breathing to, double amount) => new(
+            Lerp(from.X, to.X, amount), Lerp(from.Y, to.Y, amount),
+            Lerp(from.Width, to.Width, amount), Lerp(from.Height, to.Height, amount),
+            Lerp(from.Depth, to.Depth, amount));
+
+        private static double Lerp(double from, double to, double amount) => from + (to - from) * amount;
+    }
+
+    private static readonly Breathing Standing = new(136, 87, 58, 49, 1.5);
+    private static readonly Breathing Sleeping = new(112, 114, 59, 37, 3.3);
+    private static readonly Breathing Ledge = new(103, 121, 55, 34, 2.9);
     private readonly PetMotionEffect _motion = new();
     private readonly ImageBrush _previousBrush = new() { Stretch = Stretch.Fill };
     private BitmapSource? _current, _transitionFrom;
     private string _clip = "";
-    private double _blendStart, _blendDuration, _time, _breathWeight = 1, _sway;
+    private double _blendStart, _blendDuration, _time;
+    private Breathing _breathing;
     public BitmapSource? CurrentFrame => _current;
     public BitmapSource? PreviousFrame => _previousBrush.ImageSource as BitmapSource;
 
@@ -23,23 +37,34 @@ public sealed class PetVisual : FrameworkElement
 
     public void Update(SpriteCatalog sprites, PetEngine engine)
     {
-        var dt=Math.Clamp(engine.AliveTime-_time,0,.1);
-        Present(sprites.Sample(engine.Animation, engine.RenderAge, engine.LoopAnimation), engine.Animation, engine.AliveTime, engine.State);
-        var target=engine.State==PetState.Drag?engine.DragSway:0;
-        _sway+=(target-_sway)*(1-Math.Exp(-dt*18));
-        _motion.Sway=_sway*Math.PI/180;
+        var clip = engine.Animation;
+        var state = engine.State;
+        var progress = state switch
+        {
+            PetState.LieDown => engine.LieProgress,
+            PetState.Rise => 1 - engine.RiseProgress,
+            PetState.Stretch => Math.Sin(Math.PI * Math.Clamp(engine.Age / 2.8, 0, 1)),
+            _ => 1.0
+        };
+        var sway = state == PetState.Drag ? engine.DragSway :
+            state == PetState.Fall && clip.StartsWith("held-", StringComparison.Ordinal)
+                ? engine.DragSway * Math.Max(0, 1 - engine.Age / .08) : default;
+        Present(sprites.Sample(clip, engine.RenderAge, engine.LoopAnimation), clip, engine.AliveTime, state, progress, sway);
     }
 
     public void Present(BitmapSource frame, string clip, double time, PetState state) =>
         Present(new SpriteSample(frame,frame,0),clip,time,state);
 
-    public void Present(SpriteSample sample, string clip, double time, PetState state)
+    public void Present(SpriteSample sample, string clip, double time, PetState state) =>
+        Present(sample, clip, time, state, 1, default);
+
+    private void Present(SpriteSample sample, string clip, double time, PetState state, double progress, Vector sway)
     {
         var dt = Math.Clamp(time - _time, 0, .1); _time = time;
         RenderOptions.SetBitmapScalingMode(this,sample.From.PixelWidth>SpriteCatalog.Width
             ? BitmapScalingMode.HighQuality : BitmapScalingMode.NearestNeighbor);
-        var targetBreath = state == PetState.Doze ? 1.35 : state is PetState.Walk or PetState.Stalk or PetState.ApproachJump or PetState.Pounce or PetState.Fall or PetState.Jump ? .25 : state==PetState.Drag?.45:1;
-        _breathWeight += (targetBreath - _breathWeight) * (1 - Math.Exp(-dt * 8));
+        var target = BreathingFor(clip, state, progress);
+        _breathing = _current is null ? target : Breathing.Blend(_breathing, target, 1 - Math.Exp(-dt * 14));
         if (clip != _clip)
         {
             _transitionFrom = Capture();
@@ -58,9 +83,32 @@ public sealed class PetVisual : FrameworkElement
             _current=sample.To; _previousBrush.ImageSource=sample.From;
             _motion.Mix=sample.Blend; _motion.PreviousFrozen=0;
         }
-        _motion.Breath=(Math.Sin(time*Math.PI*2/3.4)+1)*.7*_breathWeight;
-        _motion.Ear=Math.Pow(Math.Max(0,Math.Sin(time*.65)),24)*.65;
+        _motion.Breath = (.5 - .5 * Math.Cos(time * Math.Tau / 3.8)) * _breathing.Depth;
+        _motion.BreathCenter = new Point(_breathing.X / Width, _breathing.Y / Height);
+        _motion.BreathInverseExtent = new Point(Width / _breathing.Width, Height / _breathing.Height);
+        _motion.Ear = state == PetState.Idle ? Math.Pow(Math.Max(0, Math.Sin(time * .65)), 24) * .45 : 0;
+        _motion.Sway = new Point(sway.X, sway.Y);
         InvalidateVisual();
+    }
+
+    private static Breathing BreathingFor(string clip, PetState state, double progress)
+    {
+        var rest = clip.StartsWith("window-", StringComparison.Ordinal) ? Ledge : Sleeping;
+        var pose = state switch
+        {
+            PetState.Doze => rest,
+            PetState.LieDown or PetState.Rise => Breathing.Blend(Standing, rest, progress),
+            PetState.Pet or PetState.Perch or PetState.Peek => new(120, 110, 31, 46, 1.5),
+            PetState.Drag => new(116, 91, 32, 42, 1.2),
+            PetState.HuntAim or PetState.Catch => new(136, 119, 51, 34, 1.4),
+            PetState.Stalk or PetState.Pounce => new(136, 116, 55, 38, .7),
+            PetState.Stretch => Breathing.Blend(Standing, new(117, 101, 68, 43, 1.3), progress),
+            PetState.Walk or PetState.ApproachJump or PetState.Jump or PetState.Fall or PetState.Land => Standing with { Depth = .65 },
+            _ when clip is "front" or "front-three-quarter" or "rear" or "rear-three-quarter" => new(120, 101, 38, 49, 1.5),
+            _ => Standing
+        };
+        return clip.EndsWith("-left", StringComparison.Ordinal) || clip == "left-view"
+            ? pose with { X = SpriteCatalog.Width - pose.X } : pose;
     }
 
     protected override void OnRender(DrawingContext dc)

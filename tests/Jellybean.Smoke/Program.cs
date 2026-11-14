@@ -91,7 +91,8 @@ internal static class Program
 
             var sprites=new SpriteCatalog();
             MotionPreview.CheckRenderer(sprites);
-            Check(true,"breathing changes rendered pixels and pose blending retains solid alpha");
+            Check(true,"standing and prone breathing move the torso while paws stay planted");
+            Check(true,"the rendered hanging body moves around a fixed grip");
             foreach(var clip in new[]{"front","walk-left","walk-right","pounce-left","pounce-right","doze-left","pet","perch","stretch-right","rear"})
             {
                 var frame=sprites.Frame(clip,.8);
@@ -129,6 +130,27 @@ internal static class Program
         Check(Math.Abs(Math.Abs(engine.CenterX-x)-engine.RenderAge/PetEngine.WalkCycleSeconds*engine.WalkStride)<.01,"walk phase follows real distance through acceleration");
         engine.BeginDrag(); engine.Tick(.2);
         Check(engine.State==PetState.Drag && engine.Animation.StartsWith("held-"),"drag uses a dedicated hanging body pose");
+        const double tick=1.0/60;
+        var grip=new Point(engine.CenterX,engine.FeetY);
+        var handVelocity=new Vector();
+        void MoveGrip(Vector acceleration,int frames)
+        {
+            for(var i=0;i<frames;i++)
+            {
+                handVelocity+=acceleration*tick;
+                grip+=handVelocity*tick;
+                engine.DragTo(grip.X,grip.Y);
+                engine.Tick(tick);
+            }
+        }
+        var push=new Vector(850,-500);
+        MoveGrip(push,12);
+        Check(engine.DragSway.X < -2 && engine.DragSway.Y > .4,"hanging body trails opposite the hand's acceleration in both axes");
+        MoveGrip(default,36);
+        Check(engine.DragSway.Length < .15,"hanging body settles under the grip at constant speed");
+        MoveGrip(-push,12);
+        Check(engine.DragSway.X > 2 && engine.DragSway.Y < -.4,"hanging body swings forward when the hand brakes");
+        engine.DragTo(area.Left+area.Width/2,area.Bottom);
         engine.EndDrag(); engine.Tick(.6); engine.Doze(); engine.Tick(1.6);
         Check(engine.State==PetState.Doze,"lying down reaches a breathing rest pose");
         engine.Pet(); Check(engine.State==PetState.Rise,"interaction wakes a resting cat before petting");

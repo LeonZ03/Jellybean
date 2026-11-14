@@ -27,6 +27,7 @@ public sealed class PetEngine
     private double _jumpDuration, _jumpVelocity, _actionDuration, _walkLength, _walkDuration, _walkDistance;
     private double _launchX, _approachSpeed, _pounceDuration, _pounceHeight, _huntDistance;
     private Point _targetOrigin, _dragStart, _dragTarget;
+    private Vector _dragVelocity, _dragSwayVelocity;
     private bool _toyActive, _restOnWindow, _fallLoop, _caughtToy;
     private double _toyLifetime, _peekGround, _effectRemaining;
     private string? _angle;
@@ -45,7 +46,9 @@ public sealed class PetEngine
     public Point ToyPosition { get; set; }
     public bool ToyActive => _toyActive;
     public bool ToyCaught => _caughtToy && State is PetState.Pounce or PetState.Catch;
-    public double DragSway { get; private set; }
+    public Vector DragSway { get; private set; }
+    internal double LieProgress => Math.Clamp(Age / LieSeconds, 0, 1);
+    internal double RiseProgress => Math.Clamp(RenderAge / RiseSeconds, 0, 1);
     public string? Bubble { get; private set; }
     public double EffectRemaining => _effectRemaining;
     public bool Hearts { get; private set; }
@@ -85,12 +88,7 @@ public sealed class PetEngine
         if (_refreshIn <= 0) { _surfaces.Refresh(); _refreshIn = .4; }
         if (State == PetState.Drag)
         {
-            var previousX=CenterX;
-            var lift=Smooth(Math.Clamp(Age/.16,0,1));
-            CenterX=_dragStart.X+(_dragTarget.X-_dragStart.X)*lift;
-            FeetY=_dragStart.Y+(_dragTarget.Y-_dragStart.Y)*lift;
-            var lean=Math.Clamp(-(CenterX-previousX)/Math.Max(dt,.001)*.018,-13,13);
-            DragSway+=(lean-DragSway)*(1-Math.Exp(-dt*10));
+            TickDrag(dt);
             return;
         }
         if (_support is null && State is not (PetState.Fall or PetState.Jump or PetState.Pounce)) Drop();
@@ -287,7 +285,32 @@ public sealed class PetEngine
     public void BeginDrag()
     {
         Interact(); FinishPeek(); StopToy(); _afterRise = null; _support = null; _velocityY = 0; SetState(PetState.Drag);
-        _dragStart=_dragTarget=new Point(CenterX,FeetY); DragSway=0;
+        _dragStart=_dragTarget=new Point(CenterX,FeetY);
+        _dragVelocity=_dragSwayVelocity=DragSway=default;
+    }
+
+    private void TickDrag(double dt)
+    {
+        var previous=new Point(CenterX,FeetY);
+        var lift=Smooth(Math.Clamp(Age/.16,0,1));
+        CenterX=_dragStart.X+(_dragTarget.X-_dragStart.X)*lift;
+        FeetY=_dragStart.Y+(_dragTarget.Y-_dragStart.Y)*lift;
+        if(dt<=0) return;
+
+        var velocity=(new Point(CenterX,FeetY)-previous)/(dt*_settings.Scale);
+        var change=(velocity-_dragVelocity)*(1-Math.Exp(-dt*23));
+        _dragVelocity+=change;
+        var acceleration=change/dt;
+        var target=new Vector(Math.Clamp(-acceleration.X*.0055,-7,7),
+                              Math.Clamp(-acceleration.Y*.002,-1.8,1.8));
+
+        // A damped swing responds to acceleration and settles during steady motion.
+        const double response=24;
+        var error=DragSway-target;
+        var slope=_dragSwayVelocity+response*error;
+        var decay=Math.Exp(-response*dt);
+        DragSway=target+(error+slope*dt)*decay;
+        _dragSwayVelocity=(_dragSwayVelocity-response*slope*dt)*decay;
     }
     public void DragTo(double x, double feet)
     {

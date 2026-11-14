@@ -32,7 +32,8 @@ internal static partial class Program
             Add("doze", "sleep", [40], [1000]);
             Play("rise", "sleep", Range(0, 40).Reverse().ToArray(), 1100);
             Play("window-lie", "ledge", Range(0, 24), 1050);
-            Play("window-rest", "ledge", Range(24, 40), 2300);
+            var resting = Range(24, 40).Concat(Range(25, 39).Reverse()).ToArray();
+            Play("window-rest", "ledge", resting, 4300);
             Play("window-rise", "ledge", Range(0, 24).Reverse().ToArray(), 950);
         }
 
