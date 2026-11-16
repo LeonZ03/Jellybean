@@ -12,6 +12,7 @@ float4 TailRegion : register(c8);
 float4 DetailShift : register(c9);
 float2 Eyes : register(c10);
 float EyeHeight : register(c11);
+float2 PickupOffset : register(c12);
 
 float regionWeight(float2 uv, float4 region)
 {
@@ -22,22 +23,24 @@ float regionWeight(float2 uv, float4 region)
 
 float4 main(float2 uv : TEXCOORD) : COLOR
 {
-    float y = uv.y * 240.0;
-    float2 fromChest = (uv - BreathCenter) * BreathInverseExtent;
+    // Align both napes at the same point while the previous pose lifts into the hanging pose.
+    float2 poseUv = uv - PickupOffset * (1.0 - Mix);
+    float y = poseUv.y * 240.0;
+    float2 fromChest = (poseUv - BreathCenter) * BreathInverseExtent;
     float chestWeight = saturate(1.0 - dot(fromChest, fromChest));
     float abovePaws = saturate((160.0 - y) / 20.0);
     float belowNape = saturate((y - 48.0) / 90.0);
     // Inverse sampling lifts the ribs on inhale and displaces the hanging body below the grip.
     float2 breathWarp = float2(-fromChest.x * .45, 1.0) * (Breath * chestWeight * abovePaws);
-    float2 warped = uv + (breathWarp - Sway * belowNape * belowNape) / 240.0;
-    warped -= DetailShift.xy * regionWeight(uv, HeadRegion);
-    warped -= DetailShift.zw * regionWeight(uv, TailRegion);
+    float2 warped = poseUv + (breathWarp - Sway * belowNape * belowNape) / 240.0;
+    warped -= DetailShift.xy * regionWeight(poseUv, HeadRegion);
+    warped -= DetailShift.zw * regionWeight(poseUv, TailRegion);
     float2 eyeDistance = abs(warped.x - Eyes);
     float eyeWidth = saturate(1.45 - min(eyeDistance.x, eyeDistance.y) * 44.0);
     float lid = warped.y - EyeHeight;
     float eyeHeight = saturate(1.0 - abs(lid) * 34.0);
     warped.y += Blink * eyeWidth * eyeHeight * clamp(lid, -.009, .009);
-    float4 oldPose = tex2D(Previous, lerp(warped, uv, PreviousFrozen));
+    float4 oldPose = tex2D(Previous, lerp(warped, uv, PreviousFrozen) + PickupOffset * Mix);
     float4 newPose = tex2D(Current, warped);
     // Both samples are premultiplied: a solid overlapping body stays solid during the blend.
     return lerp(oldPose, newPose, Mix);

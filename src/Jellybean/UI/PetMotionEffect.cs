@@ -22,6 +22,7 @@ internal sealed class PetMotionEffect : ShaderEffect
     public static readonly DependencyProperty DetailShiftProperty = Register("DetailShift", new Point4D(), 9);
     public static readonly DependencyProperty EyesProperty = Register("Eyes", new Point(), 10);
     public static readonly DependencyProperty EyeHeightProperty = Register("EyeHeight", 0.0, 11);
+    public static readonly DependencyProperty PickupOffsetProperty = Register("PickupOffset", new Point(), 12);
     public Brush Previous { get => (Brush)GetValue(PreviousProperty); set => SetValue(PreviousProperty, value); }
     public double Mix { get => (double)GetValue(MixProperty); set => SetValue(MixProperty, value); }
     public double Breath { get => (double)GetValue(BreathProperty); set => SetValue(BreathProperty, value); }
@@ -35,13 +36,14 @@ internal sealed class PetMotionEffect : ShaderEffect
     public Point4D DetailShift { get => (Point4D)GetValue(DetailShiftProperty); set => SetValue(DetailShiftProperty, value); }
     public Point Eyes { get => (Point)GetValue(EyesProperty); set => SetValue(EyesProperty, value); }
     public double EyeHeight { get => (double)GetValue(EyeHeightProperty); set => SetValue(EyeHeightProperty, value); }
+    public Point PickupOffset { get => (Point)GetValue(PickupOffsetProperty); set => SetValue(PickupOffsetProperty, value); }
 
     public PetMotionEffect()
     {
         PixelShader = Shader;
         foreach (var property in new[] { InputProperty, PreviousProperty, MixProperty, BreathProperty, BlinkProperty,
             PreviousFrozenProperty, SwayProperty, BreathCenterProperty, BreathInverseExtentProperty, HeadRegionProperty,
-            TailRegionProperty, DetailShiftProperty, EyesProperty, EyeHeightProperty }) UpdateShaderValue(property);
+            TailRegionProperty, DetailShiftProperty, EyesProperty, EyeHeightProperty, PickupOffsetProperty }) UpdateShaderValue(property);
     }
     private static DependencyProperty Register<T>(string name, T initial, int register) where T : struct =>
         DependencyProperty.Register(name, typeof(T), typeof(PetMotionEffect), new UIPropertyMetadata(initial, PixelShaderConstantCallback(register)));

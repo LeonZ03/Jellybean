@@ -101,7 +101,7 @@ internal sealed class PetLifeMotion
             PetState.Doze => rest,
             PetState.LieDown or PetState.Rise => Breath.Blend(Standing, rest, progress),
             PetState.Pet or PetState.Perch or PetState.Peek => new(120, 111, 31, 47, 1.8, 3.0),
-            PetState.Drag => new(116, 92, 33, 39, 1.4, 2.8),
+            PetState.Drag => new(115, 102, 39, 46, 1.4, 2.8),
             PetState.HuntAim or PetState.Catch => new(135, 119, 51, 34, 1.6, 2.5),
             PetState.Stalk or PetState.Pounce => new(135, 116, 55, 38, .9, 2.4),
             PetState.Stretch => Breath.Blend(Standing, new(117, 101, 68, 43, 1.5, 3.0), progress),
