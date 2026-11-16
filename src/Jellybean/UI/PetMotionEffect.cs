@@ -23,6 +23,8 @@ internal sealed class PetMotionEffect : ShaderEffect
     public static readonly DependencyProperty EyesProperty = Register("Eyes", new Point(), 10);
     public static readonly DependencyProperty EyeHeightProperty = Register("EyeHeight", 0.0, 11);
     public static readonly DependencyProperty PickupOffsetProperty = Register("PickupOffset", new Point(), 12);
+    public static readonly DependencyProperty GestureRegionProperty = Register("GestureRegion", new Point4D(), 13);
+    public static readonly DependencyProperty GestureShiftProperty = Register("GestureShift", new Point(), 14);
     public Brush Previous { get => (Brush)GetValue(PreviousProperty); set => SetValue(PreviousProperty, value); }
     public double Mix { get => (double)GetValue(MixProperty); set => SetValue(MixProperty, value); }
     public double Breath { get => (double)GetValue(BreathProperty); set => SetValue(BreathProperty, value); }
@@ -37,13 +39,16 @@ internal sealed class PetMotionEffect : ShaderEffect
     public Point Eyes { get => (Point)GetValue(EyesProperty); set => SetValue(EyesProperty, value); }
     public double EyeHeight { get => (double)GetValue(EyeHeightProperty); set => SetValue(EyeHeightProperty, value); }
     public Point PickupOffset { get => (Point)GetValue(PickupOffsetProperty); set => SetValue(PickupOffsetProperty, value); }
+    public Point4D GestureRegion { get => (Point4D)GetValue(GestureRegionProperty); set => SetValue(GestureRegionProperty, value); }
+    public Point GestureShift { get => (Point)GetValue(GestureShiftProperty); set => SetValue(GestureShiftProperty, value); }
 
     public PetMotionEffect()
     {
         PixelShader = Shader;
         foreach (var property in new[] { InputProperty, PreviousProperty, MixProperty, BreathProperty, BlinkProperty,
             PreviousFrozenProperty, SwayProperty, BreathCenterProperty, BreathInverseExtentProperty, HeadRegionProperty,
-            TailRegionProperty, DetailShiftProperty, EyesProperty, EyeHeightProperty, PickupOffsetProperty }) UpdateShaderValue(property);
+            TailRegionProperty, DetailShiftProperty, EyesProperty, EyeHeightProperty, PickupOffsetProperty,
+            GestureRegionProperty, GestureShiftProperty }) UpdateShaderValue(property);
     }
     private static DependencyProperty Register<T>(string name, T initial, int register) where T : struct =>
         DependencyProperty.Register(name, typeof(T), typeof(PetMotionEffect), new UIPropertyMetadata(initial, PixelShaderConstantCallback(register)));

@@ -5,7 +5,7 @@ namespace Jellybean.Engine;
 
 public enum PetState { Idle, Walk, LieDown, Doze, Rise, Perch, Pet, Stretch, Fall, Land, Drag, HuntAim, Stalk, Pounce, Catch, ApproachJump, Jump, Peek }
 
-public sealed class PetEngine
+public sealed partial class PetEngine
 {
     public const double WalkCycleSeconds = 1.2;
     internal const double PickupSeconds = .30;
@@ -53,7 +53,9 @@ public sealed class PetEngine
     public string? Bubble { get; private set; }
     public double EffectRemaining => _effectRemaining;
     public bool Hearts { get; private set; }
-    public double PeekFraction => State == PetState.Peek ? Smooth(Math.Min(1, Age / .5)) : 0;
+    public double PeekFraction => State == PetState.Peek
+        ? Smooth(Math.Min(1, Age / .5)) + PeekDip
+        : 0;
     public Surface? Support => _support;
     public double BodyHeight => 128 * _settings.Scale;
     public Rect WorkArea => _surfaces.Desktop.WorkAreaAt(CenterX, FeetY);
@@ -70,6 +72,7 @@ public sealed class PetEngine
         PetState.Jump when Age >= TakeoffSeconds => (Age - TakeoffSeconds) / _jumpDuration * AirClipSeconds,
         PetState.Land => Age / _actionDuration * .28,
         PetState.Pounce => Age < PounceWindup ? Age : PounceWindup + (Age - PounceWindup) / _pounceDuration * .28,
+        PetState.Catch when Gesture == PetGesture.MissedPounce => .18,
         _ => Age
     };
 
@@ -108,26 +111,45 @@ public sealed class PetEngine
         {
             _toyLifetime -= dt;
             if (_toyLifetime <= 0) StopToy();
-            else if (State == PetState.Idle) AimAtToy();
+            else if (State == PetState.Idle && Gesture is null) AimAtToy();
         }
+        if (TickGestures(dt)) return;
+
         if (State == PetState.Walk) TickWalk();
         else if (State is PetState.HuntAim or PetState.Stalk or PetState.Pounce or PetState.Catch) TickHunt(dt);
         else if (State == PetState.Peek)
         {
-            FeetY = _peekGround + BodyHeight * .5 * PeekFraction;
-            if (Age > 4.5) { FeetY = _peekGround; Idle(); }
+            UpdatePeekPosition();
+            if (Age > _actionDuration) Idle();
         }
-        else if (State == PetState.LieDown && Age >= LieSeconds) SetState(PetState.Doze, _random.Next(12, 24));
-        else if (State == PetState.Doze && Age >= _actionDuration) Rise();
+        else if (State == PetState.LieDown && Age >= LieSeconds)
+        {
+            var preview = _restPreview;
+            SetState(PetState.Doze, preview is null ? _random.Next(12, 24) : 6);
+            if (preview is { } gesture)
+            {
+                _poseGesturePlayed = _dreamPlayed = true;
+                StartGesture(gesture);
+            }
+        }
+        else if (State == PetState.Doze && Age >= _actionDuration)
+        {
+            Rise();
+            if (_settings.Autonomous && _random.Next(3) == 0)
+                _afterRise = () => StartGesture(PetGesture.Yawn);
+        }
         else if (State == PetState.Rise && Age >= _actionDuration)
         { var action = _afterRise; _afterRise = null; Idle(); action?.Invoke(); }
         else if (State is PetState.Pet or PetState.Stretch or PetState.Perch or PetState.Land)
         {
             if (Age >= _actionDuration)
             {
-                var action=State==PetState.Land?_afterRise:null;
-                if(State==PetState.Land) _afterRise=null;
-                Idle(); action?.Invoke();
+                var landed = State == PetState.Land;
+                var action = landed ? _afterRise : null;
+                if (landed) _afterRise = null;
+                Idle();
+                if (action is not null) action();
+                else if (landed) TryTestLedge();
             }
         }
         else if (State == PetState.Idle && _settings.Autonomous && !_toyActive && Age >= _nextAction) ChooseAction();
@@ -147,10 +169,10 @@ public sealed class PetEngine
         {
             var limit = Facing < 0 ? edge.Left + 62 * _settings.Scale : edge.Right - 62 * _settings.Scale;
             var remaining = Facing * (limit - CenterX);
-            if (remaining < delta) { CenterX += Facing * Math.Max(0, remaining); Idle(); return; }
+            if (remaining < delta) { CenterX += Facing * Math.Max(0, remaining); Idle(); TryTestLedge(); return; }
         }
         CenterX += Facing * delta; _walkDistance = distance;
-        if (Age >= _walkDuration) Idle();
+        if (Age >= _walkDuration) { Idle(); TryTestLedge(); }
     }
 
     // The root and the feet use the same travelled distance, including acceleration and braking.
@@ -246,9 +268,15 @@ public sealed class PetEngine
         switch (_random.Next(7))
         {
             case 0: case 1: Walk(); break;
-            case 2: Doze(); break;
+            case 2:
+                if (_random.Next(3) == 0) StartGesture(PetGesture.Yawn, after: Doze);
+                else Doze();
+                break;
             case 3: Stretch(); break;
-            case 4: Perch(); break;
+            case 4:
+                if (AliveTime >= _nextGroom) BeginGrooming();
+                else Perch();
+                break;
             case 5: if (_settings.AutoJump) JumpToWindow(false); else Idle(); break;
             default: if (_support is { Window: not 0 }) Peek(); else Idle(); break;
         }
@@ -266,7 +294,14 @@ public sealed class PetEngine
     });
     public void Doze() => GroundAction(() => { StopToy(); _restOnWindow = _support is { Window: not 0 }; SetState(PetState.LieDown); });
     public void Perch() => GroundAction(() => SetState(PetState.Perch, 10));
-    public void Pet() => GroundAction(() => { SetState(PetState.Pet, 2.1); Hearts = true; Bubble = null; _effectRemaining = 2.1; });
+    public void Pet() => GroundAction(() =>
+    {
+        _petHead = State is PetState.Perch or PetState.Pet
+            ? new Point(CenterX, FeetY - 88 * _settings.Scale)
+            : StandingNose;
+        SetState(PetState.Pet, 2.1);
+        Hearts = true; Bubble = null; _effectRemaining = 2.1;
+    });
     public void Stretch() => GroundAction(() => SetState(PetState.Stretch, 2.8));
     public void Remind() => GroundAction(() => { SetState(PetState.Stretch, 2.8); Say("该休息一下啦，陪糖豆伸个懒腰。" ); });
     public void Say(string text) { Bubble = text; Hearts = false; _effectRemaining = 8; }
@@ -283,7 +318,13 @@ public sealed class PetEngine
         _riseOffset=State==PetState.LieDown?RiseSeconds*(1-Math.Clamp(Age/LieSeconds,0,1)):0;
         SetState(PetState.Rise,RiseSeconds-_riseOffset);
     }
-    private void SetState(PetState state, double duration = 0) { State = state; _angle = null; Age = 0; _actionDuration = duration; }
+    private void SetState(PetState state, double duration = 0)
+    {
+        ClearGesture();
+        _restPreview = null;
+        _poseGesturePlayed = _dreamPlayed = _previewPeek = _seatedGrooming = false;
+        State = state; _angle = null; Age = 0; _actionDuration = duration;
+    }
     public void BeginDrag()
     {
         _pickupFromStanding = State is (PetState.Idle or PetState.Walk or PetState.ApproachJump) &&
@@ -341,7 +382,15 @@ public sealed class PetEngine
     {
         FeetY = top; _velocityY = 0;
         Attach(_surfaces.Surfaces.First(s => s.ContainsX(CenterX) && Math.Abs(s.Top - top) < 4));
-        if (cushion) SetState(PetState.Land, duration); else { var action=_afterRise; _afterRise=null; Idle(); action?.Invoke(); }
+        if (cushion) SetState(PetState.Land, duration);
+        else
+        {
+            var action = _afterRise;
+            _afterRise = null;
+            Idle();
+            if (action is not null) action();
+            else TryTestLedge();
+        }
     }
     private bool NeedsCushion(double height) => height>=110*_settings.Scale;
     private void Attach(Surface support)
@@ -358,18 +407,20 @@ public sealed class PetEngine
     }
     private void AimAtToy()
     {
-        Facing=ToyPosition.X<CenterX?-1:1; _caughtToy=false;
+        Facing=ToyDirection; _caughtToy=false;
         SetState(PetState.HuntAim,.18+_random.NextDouble()*.12);
     }
     private void TickHunt(double dt)
     {
         if (State==PetState.HuntAim)
         {
-            Facing=ToyPosition.X<CenterX?-1:1;
+            Facing=ToyDirection;
+            if (TryReachToy()) return;
             if (Age>=_actionDuration) { _huntDistance=0; SetState(PetState.Stalk); }
         }
         else if (State==PetState.Stalk)
         {
+            if (TryReachToy()) return;
             var distance=ToyPosition.X-CenterX-Facing*38*_settings.Scale;
             if (Facing*distance<-45*_settings.Scale) { AimAtToy(); return; }
             if (Math.Abs(distance)<155*_settings.Scale && Age>.18) { BeginPounce(); return; }
@@ -384,11 +435,16 @@ public sealed class PetEngine
             CenterX=_jumpStart.X+(_jumpEnd.X-_jumpStart.X)*travel;
             FeetY=_jumpStart.Y-Math.Sin(t*Math.PI)*_pounceHeight;
             var paws=new Point(CenterX+Facing*38*_settings.Scale,FeetY-12*_settings.Scale);
-            if ((paws-ToyPosition).Length<38*_settings.Scale) _caughtToy=true;
+            if (t > .22 && (paws-ToyPosition).Length<38*_settings.Scale) _caughtToy=true;
             if (t>=1)
             {
                 FeetY=_jumpStart.Y;
-                if (_toyActive) SetState(PetState.Catch,.18);
+                if (_toyActive)
+                {
+                    SetState(PetState.Catch,.18);
+                    if (!_caughtToy && _afterRise is null && (ToyPosition - _pounceTarget).Length > 35 * _settings.Scale)
+                        StartGesture(PetGesture.MissedPounce, ToyDirection, AimAtToy);
+                }
                 else LandAt(FeetY,false);
             }
         }
@@ -401,7 +457,8 @@ public sealed class PetEngine
     }
     private void BeginPounce()
     {
-        Facing = ToyPosition.X < CenterX ? -1 : 1; _jumpStart = new Point(CenterX, FeetY);
+        Facing = ToyDirection; _jumpStart = new Point(CenterX, FeetY);
+        _pounceTarget = ToyPosition;
         if(Math.Abs(ToyPosition.X-CenterX)<48*_settings.Scale && Math.Abs(ToyPosition.Y-FeetY)<75*_settings.Scale)
         { _caughtToy=true; SetState(PetState.Catch,.18); return; }
         var desired=ToyPosition.X-Facing*38*_settings.Scale;
@@ -441,8 +498,10 @@ public sealed class PetEngine
         if (State is PetState.Doze or PetState.LieDown or PetState.Rise) { _afterRise = Peek; if (State != PetState.Rise) Rise(); return; }
         StopToy(); if (State == PetState.Peek) { FinishPeek(); Idle(); return; }
         if (_support is not { Window: not 0 }) { Say("把我放到窗沿，我就探头看你。" ); return; }
-        _peekGround = FeetY; SetState(PetState.Peek);
+        BeginPeek();
     }
+    private void BeginPeek() { _peekGround = FeetY; SetState(PetState.Peek, 4.5); }
+    private void UpdatePeekPosition() => FeetY = _peekGround + BodyHeight * .5 * PeekFraction;
     private void FinishPeek() { if (State == PetState.Peek) FeetY = _peekGround; }
     public void BringIntoView()
     {
@@ -462,7 +521,8 @@ public sealed class PetEngine
         PetState.LieDown => (_restOnWindow ? "window-lie" : "lie") + Direction,
         PetState.Doze => (_restOnWindow ? "window-rest" : "doze") + Direction,
         PetState.Rise => (_restOnWindow ? "window-rise" : "rise") + Direction,
-        PetState.Perch => "perch", PetState.Pet => "pet", PetState.Stretch => "stretch" + Direction,
+        PetState.Perch => _seatedGrooming ? "peek" : "perch",
+        PetState.Pet => "pet", PetState.Stretch => "stretch" + Direction,
         PetState.Pounce => Facing < 0 ? "pounce-left" : "pounce-right",
         PetState.Land => Facing < 0 ? "land-left" : "land-right",
         PetState.Jump when Age < TakeoffSeconds => Facing < 0 ? "takeoff-left" : "takeoff-right",

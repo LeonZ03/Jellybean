@@ -71,7 +71,7 @@ public sealed class PetWindow : Window
             var x = (int)(p.X/factor); var y = (int)(p.Y/factor);
             if (x < 0 || y < 0 || x >= SpriteCatalog.Width || y >= SpriteCatalog.Height ||
                 _alpha.Length == 0 || _alpha[y*SpriteCatalog.Width+x] < 12 ||
-                (_engine.State == PetState.Peek && y > SpriteCatalog.Foot - _engine.BodyHeight * .5 / _settings.Scale * _engine.PeekFraction))
+                (_engine.State == PetState.Peek && y >= PeekClipY))
             { handled = true; return -1; }
         }
         return 0;
@@ -100,10 +100,11 @@ public sealed class PetWindow : Window
         var dt = Math.Min(now - _lastTick, .05);
         _lastTick = now;
         if (_dragging && (Win32.GetAsyncKeyState(1) & 0x8000) == 0) EndDrag();
-        if (_dragging)
+        if (Win32.GetCursorPos(out var cursor))
         {
-            Win32.GetCursorPos(out var cursor);
-            _engine.DragTo(cursor.X/_dpi-_dragOffset.X,cursor.Y/_dpi-_dragOffset.Y);
+            var point = new Point(cursor.X / _dpi, cursor.Y / _dpi);
+            _engine.UpdateCursor(point, !_pressing && !_clickTimer.IsEnabled);
+            if (_dragging) _engine.DragTo(point.X - _dragOffset.X, point.Y - _dragOffset.Y);
         }
         _engine.Tick(dt);
         Render(); FrameUpdated?.Invoke();
@@ -125,7 +126,7 @@ public sealed class PetWindow : Window
         }
         // The body sinks behind the window; only the part above its edge remains visible.
         _root.Clip = _engine.State == PetState.Peek
-            ? new RectangleGeometry(new Rect(0,0,SpriteCatalog.Width,SpriteCatalog.Foot-64*_engine.PeekFraction))
+            ? new RectangleGeometry(new Rect(0, 0, SpriteCatalog.Width, PeekClipY))
             : null;
         var s = _settings.Scale * _dpi;
         var x = (int)Math.Round((_engine.CenterX-SpriteCatalog.Anchor*_settings.Scale)*_dpi);
@@ -137,6 +138,8 @@ public sealed class PetWindow : Window
             _lastX=x; _lastY=y; _lastW=w; _lastH=h;
         }
     }
+
+    private double PeekClipY => SpriteCatalog.Foot - 64 * _engine.PeekFraction;
 
     private void SyncScale()
     {

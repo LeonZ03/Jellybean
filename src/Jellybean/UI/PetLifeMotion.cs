@@ -23,7 +23,8 @@ internal sealed class PetLifeMotion
     private Breath _breathing;
     private double _phase;
 
-    public void Apply(PetMotionEffect effect, string clip, PetState state, double progress, double time, double elapsed, Vector sway)
+    public void Apply(PetMotionEffect effect, string clip, PetState state, double progress, double time, double elapsed, Vector sway,
+        PetGesture? gesture = null, double gestureProgress = 0, int gestureDirection = 0)
     {
         const double size = SpriteCatalog.Width;
         var mirrored = clip.EndsWith("-left", StringComparison.Ordinal) || clip == "left-view";
@@ -71,15 +72,92 @@ internal sealed class PetLifeMotion
         var twitch = Wave(time, onLedge ? 4.8 : 5.9, .6, .93);
         var headAmount = head.Z == 0 ? 0 : sleeping ? .5 : 1;
         var tailAmount = tail.Z == 0 ? 0 : onLedge ? 3.5 : 2.8;
+        var headShift = new Vector(horizontal * headAmount * (.85 * listening + 1.35 * glance),
+            headAmount * (1.2 * listening - .6 * glance));
+        Point4D gestureRegion = default;
+        Vector gestureShift = default;
+        var squint = 0.0;
+
+        if (gesture == PetGesture.Listen && (side || clip is "perch" or "front" or "front-three-quarter" or "rear" or "rear-three-quarter"))
+        {
+            var turn = gestureDirection == 0 ? -1 : Math.Sign(gestureDirection);
+            var (faceX, faceY, earX, earY, direction) = clip switch
+            {
+                "perch" => (118, 70, 122, 57, -1),
+                "front" => (120, 66, 120 - 13 * turn, 47, turn),
+                "front-three-quarter" => (82, 68, 70, 48, 1),
+                "rear" => (120, 62, 120 - 12 * turn, 49, turn),
+                "rear-three-quarter" => (144, 63, 154, 49, -1),
+                "left-view" or "right-view" => (168, 66, 166, 47, -horizontal),
+                _ => (183, 65, 182, 45, -horizontal)
+            };
+            var ear = Envelope(gestureProgress, 0, .10, .19, .42);
+            var look = Envelope(gestureProgress, .17, .42, .56, 1);
+            head = Region(faceX, faceY, 36, 36);
+            headShift += new Vector(direction * 8, -1.9) * look;
+            gestureRegion = Region(earX, earY, 14, 18);
+            gestureShift = new Vector(direction * 4.0, -2.0) * ear;
+        }
+        else if (gesture == PetGesture.Sniff && (side || clip == "perch"))
+        {
+            var (faceX, faceY, noseX, noseY) = clip switch
+            {
+                "perch" => (120, 72, 131, 76),
+                "left-view" or "right-view" => (171, 73, 191, 78),
+                _ => (183, 71, 198, 74)
+            };
+            var reach = Envelope(gestureProgress, 0, .26, .76, 1);
+            var sniff = Pulse(gestureProgress, .25, .46) + Pulse(gestureProgress, .48, .70);
+            head = Region(faceX, faceY, 40, 39);
+            headShift += new Vector(horizontal * 5.0, .9) * reach;
+            gestureRegion = Region(noseX + 2.5 * reach, noseY, 15, 14);
+            gestureShift = new Vector(horizontal * 2.4, -1.9) * sniff;
+        }
+        else if (gesture == PetGesture.DreamTwitch && (sleeping || onLedge))
+        {
+            var (earX, earY, pawX) = onLedge ? (166, 80, 160) : (167, 111, 159);
+            var ear = Pulse(gestureProgress, .13, .35) - .45 * Pulse(gestureProgress, .35, .49);
+            var paw = Pulse(gestureProgress, .32, .54) - .25 * Pulse(gestureProgress, .54, .68);
+            head = Region(earX, earY, 14, 17);
+            headShift += new Vector(-horizontal * 3.1, 1.8) * ear;
+            gestureRegion = Region(pawX, 157, 14, 12);
+            gestureShift = new Vector(horizontal * 2.1, -1.7) * paw;
+        }
+        else if (gesture == PetGesture.Nuzzle && clip == "pet")
+        {
+            var direction = gestureDirection == 0 ? -1 : Math.Sign(gestureDirection);
+            var lean = Envelope(gestureProgress, 0, .32, .65, 1);
+            var rub = Pulse(gestureProgress, .30, .78);
+            head = Region(105, 76, 35, 37);
+            headShift = new Vector(direction * 6.4, -1.5) * lean;
+            gestureRegion = Region(100, 69, 28, 22);
+            gestureShift = new Vector(direction * 2.2, -2.2) * rub;
+            eyes = new Point(94 / size, 105 / size);
+            eyeHeight = 78;
+            squint = 2.5 * Envelope(gestureProgress, .02, .23, .70, .98);
+        }
+
         effect.HeadRegion = head;
         effect.TailRegion = tail;
-        effect.DetailShift = new Point4D(horizontal * headAmount * (.85 * listening + 1.35 * glance) / size,
-            headAmount * (1.2 * listening - .6 * glance) / size,
+        effect.DetailShift = new Point4D(headShift.X / size, headShift.Y / size,
             horizontal * tailAmount * twitch / size, -.64 * tailAmount * twitch / size);
+        effect.GestureRegion = gestureRegion;
+        effect.GestureShift = new Point(gestureShift.X / size, gestureShift.Y / size);
         effect.Eyes = eyes;
         effect.EyeHeight = eyeHeight / size;
         var blinking = (time + .54 * Math.Sin(time * .89)) % (onLedge ? 5.2 : 4.2) - 1.8;
-        effect.Blink = eyeHeight == 0 ? 0 : 3.7 * Smooth(blinking / .08) * (1 - Smooth((blinking - .11) / .14));
+        var blink = eyeHeight == 0 ? 0 : 3.7 * Smooth(blinking / .08) * (1 - Smooth((blinking - .11) / .14));
+        effect.Blink = Math.Max(blink, squint);
+    }
+
+    private static double Envelope(double progress, double start, double open, double close, double end) =>
+        Smooth((progress - start) / (open - start)) * Smooth((end - progress) / (end - close));
+
+    private static double Pulse(double progress, double start, double end)
+    {
+        var t = Math.Clamp((progress - start) / (end - start), 0, 1);
+        var pulse = Math.Sin(Math.PI * t);
+        return pulse * pulse;
     }
 
     private static double Wave(double time, double period, double offset, double span)

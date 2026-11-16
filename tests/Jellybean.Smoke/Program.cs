@@ -116,6 +116,7 @@ internal static class Program
             for(var tick=0;tick<100 && engine.Bubble is null;tick++) engine.Tick(.03);
             Check(engine.Bubble is not null && engine.State==PetState.Stretch,"reminder waits for landing then combines stretch and speech");
             CheckMotionBehavior(surfaces,sprites,area);
+            CheckGestures(surfaces,sprites,area);
             CheckRandomWindows(dpi,area);
             var panel=new SettingsWindow(new UserSettings(),sprites); double previewScale=0;
             panel.ScalePreview+=scale=>previewScale=scale;
@@ -196,6 +197,51 @@ internal static class Program
         bubble.SetText("陪我玩一会儿，好不好？",1); var normalSize=bubble.Size;
         bubble.SetText("糖豆想陪你休息一会儿。\n放下手里的工作，陪我玩一下，好不好？",1);
         Check(shortSize.Width<normalSize.Width && bubble.Size.Height>normalSize.Height && bubble.Size.Width<=260,"speech bubbles fit short text and grow vertically for wrapped text");
+    }
+
+    private static void CheckGestures(SurfaceProvider surfaces,SpriteCatalog sprites,Rect area)
+    {
+        const double step=1.0/60;
+        PetEngine Grounded()
+        {
+            var actor=new PetEngine(surfaces,new UserSettings { Autonomous=false },sprites.WalkStrideLeft,sprites.WalkStrideRight);
+            actor.BeginDrag(); actor.DragTo(area.Left+area.Width/2,area.Bottom); actor.EndDrag();
+            return actor;
+        }
+
+        foreach (var gesture in Enum.GetValues<PetGesture>())
+        {
+            var actor=Grounded();
+            actor.PreviewGesture(gesture);
+            for (var i=0;i<240 && (actor.Gesture!=gesture || actor.GestureProgress<.42);i++) actor.Tick(step);
+            if (actor.Gesture!=gesture) throw new InvalidOperationException($"Gesture preview did not enter {gesture}.");
+            var view=new PetVisual(); view.Measure(new Size(240,240)); view.Arrange(new Rect(0,0,240,240));
+            view.Update(sprites,actor); view.UpdateLayout();
+            if (!sprites.HitMask(view.Capture()!).Any(a=>a>240)) throw new InvalidOperationException($"Empty gesture frame for {gesture}.");
+            if (gesture==PetGesture.PeekAgain && actor.PeekFraction<1.5) throw new InvalidOperationException("Peek did not dip to ear height.");
+        }
+        Check(true,"all fourteen gesture previews play and render");
+
+        var hover=Grounded();
+        var nose=new Point(hover.CenterX+hover.Facing*79,hover.FeetY-86);
+        hover.UpdateCursor(nose,true);
+        for(var i=0;i<40 && hover.Gesture is null;i++) hover.Tick(step);
+        Check(hover.Gesture==PetGesture.Sniff,"pausing near the nose triggers sniffing");
+        hover.Pet();
+        for(var i=0;i<40 && hover.Gesture is null;i++) hover.Tick(step);
+        Check(hover.Gesture==PetGesture.Nuzzle,"leaving the cursor by the head after a pet triggers a nuzzle");
+
+        var toy=Grounded();
+        toy.UpdateCursor(new Point(toy.CenterX+36,toy.FeetY-31),true); toy.ToggleToy(); toy.Tick(step);
+        Check(toy.Gesture==PetGesture.ReachToy,"the nearby wand triggers a one-paw reach");
+        toy=Grounded();
+        toy.UpdateCursor(new Point(toy.CenterX+132,toy.FeetY-8),true); toy.ToggleToy();
+        for(var i=0;i<100 && toy.State!=PetState.Pounce;i++) toy.Tick(step);
+        toy.UpdateCursor(new Point(toy.CenterX-160,toy.FeetY-14),true);
+        for(var i=0;i<100 && toy.Gesture!=PetGesture.MissedPounce;i++) toy.Tick(step);
+        Check(toy.Gesture==PetGesture.MissedPounce && toy.GestureDirection<0,"moving the wand away mid-pounce triggers a look back");
+        for(var i=0;i<61;i++) toy.Tick(step);
+        Check(toy.State==PetState.HuntAim && toy.Facing<0,"a missed pounce re-aims toward the live wand");
     }
 
     private static void CheckRandomWindows(double dpi,Rect area)

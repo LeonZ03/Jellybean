@@ -27,6 +27,27 @@ public sealed class TrayService : IDisposable
         var clips=new[]{"front","front-three-quarter","left-view","right-view","rear","rear-three-quarter"};
         for(var i=0;i<names.Length;i++) { var clip=clips[i]; views.DropDownItems.Add(names[i],null,(_,_)=>session.ShowAngle(clip)); }
         _menu.Items.Add(views);
+        var gestures = new Forms.ToolStripMenuItem("看看新动作");
+        (PetGesture Gesture, string Name)[] previews =
+        [
+            (PetGesture.Listen, "转耳再回头"),
+            (PetGesture.Sniff, "闻一闻"),
+            (PetGesture.ShiftWeight, "换脚站"),
+            (PetGesture.Groom, "舔爪洗脸"),
+            (PetGesture.Yawn, "打哈欠"),
+            (PetGesture.DreamTwitch, "睡梦抽动"),
+            (PetGesture.RollOver, "侧躺换边"),
+            (PetGesture.CurlUp, "蜷成一团"),
+            (PetGesture.TestLedge, "窗沿试探"),
+            (PetGesture.PeekAgain, "缩回去再偷看"),
+            (PetGesture.ReachToy, "伸一只爪够玩具"),
+            (PetGesture.MissedPounce, "扑空后回头"),
+            (PetGesture.Nuzzle, "顶一下手"),
+            (PetGesture.Knead, "踩奶")
+        ];
+        foreach (var (gesture, name) in previews)
+            gestures.DropDownItems.Add(name, null, (_, _) => session.Perform(() => session.Engine.PreviewGesture(gesture)));
+        _menu.Items.Add(gestures);
         _menu.Items.Add(new Forms.ToolStripSeparator());
         Check("显示糖豆",()=>!session.Hidden,()=>session.SetHidden(!session.Hidden));
         Check("自己活动",()=>session.Settings.Autonomous,()=> { session.Settings.Autonomous=!session.Settings.Autonomous; session.SaveSettings(); });

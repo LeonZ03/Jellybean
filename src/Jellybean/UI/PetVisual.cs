@@ -26,7 +26,10 @@ public sealed class PetVisual : FrameworkElement
 
     public void Update(SpriteCatalog sprites, PetEngine engine)
     {
-        var clip = engine.Animation;
+        var baseClip = engine.Animation;
+        var gesture = engine.Gesture;
+        var gestureClip = GestureClip(gesture, engine.Facing);
+        var clip = gestureClip ?? baseClip;
         var state = engine.State;
         var lifting = clip.StartsWith("pickup-", StringComparison.Ordinal);
         var progress = state switch
@@ -40,7 +43,29 @@ public sealed class PetVisual : FrameworkElement
         var sway = state == PetState.Drag ? engine.DragSway :
             state == PetState.Fall && clip.StartsWith("held-", StringComparison.Ordinal)
                 ? engine.DragSway * Math.Max(0, 1 - engine.Age / .08) : default;
-        Present(sprites.Sample(clip, engine.RenderAge, engine.LoopAnimation), clip, engine.AliveTime, state, progress, lifting ? sway * progress : sway);
+        var sample = gestureClip is null
+            ? sprites.Sample(baseClip, engine.RenderAge, engine.LoopAnimation)
+            : sprites.Sample(gestureClip, engine.GestureProgress, false);
+        Present(sample, clip, engine.AliveTime, state, progress, lifting ? sway * progress : sway,
+            gesture, engine.GestureProgress, engine.GestureDirection);
+    }
+
+    private static string? GestureClip(PetGesture? gesture, int facing)
+    {
+        var movement = gesture switch
+        {
+            PetGesture.ShiftWeight => "shift",
+            PetGesture.Yawn => "yawn",
+            PetGesture.RollOver => "roll",
+            PetGesture.CurlUp => "curl",
+            PetGesture.TestLedge => "ledge",
+            PetGesture.ReachToy => "reach",
+            PetGesture.MissedPounce => "miss",
+            PetGesture.Knead => "knead",
+            _ => null
+        };
+        if (gesture == PetGesture.Groom) return "gesture-groom";
+        return movement is null ? null : "gesture-" + movement + (facing < 0 ? "-left" : "-right");
     }
 
     public void Present(BitmapSource frame, string clip, double time, PetState state) =>
@@ -49,7 +74,8 @@ public sealed class PetVisual : FrameworkElement
     public void Present(SpriteSample sample, string clip, double time, PetState state) =>
         Present(sample, clip, time, state, 1, default);
 
-    private void Present(SpriteSample sample, string clip, double time, PetState state, double progress, Vector sway)
+    private void Present(SpriteSample sample, string clip, double time, PetState state, double progress, Vector sway,
+        PetGesture? gesture = null, double gestureProgress = 0, int gestureDirection = 0)
     {
         var elapsed = _current is null ? 0 : Math.Max(0, time - _time);
         _time = time;
@@ -58,7 +84,8 @@ public sealed class PetVisual : FrameworkElement
         {
             var samePose = _transitionFrom is null && ReferenceEquals(_current, sample.From) && sample.Blend == 0 &&
                 (_motion.Mix == 1 || ReferenceEquals(_previousBrush.ImageSource, _current));
-            _transitionFrom = state == PetState.Drag || samePose ? null : Capture();
+            var fullFrameGesture = clip.StartsWith("gesture-", StringComparison.Ordinal) || _clip.StartsWith("gesture-", StringComparison.Ordinal);
+            _transitionFrom = state == PetState.Drag || samePose || fullFrameGesture ? null : Capture();
             _pickupOffset = state == PetState.Drag && _current is not null && clip.StartsWith("held-", StringComparison.Ordinal) &&
                 !_clip.StartsWith("pickup-", StringComparison.Ordinal)
                 ? new Point((_nape.X - HeldNape.X) / Width, (_nape.Y - HeldNape.Y) / Height) : default;
@@ -81,7 +108,7 @@ public sealed class PetVisual : FrameworkElement
         var offset = state == PetState.Drag ? 1 - phase * phase * (3 - 2 * phase) : 0;
         _motion.PickupOffset = new Point(_pickupOffset.X * offset, _pickupOffset.Y * offset);
         _nape = NapeFor(clip, state, progress);
-        _life.Apply(_motion, clip, state, progress, time, elapsed, sway);
+        _life.Apply(_motion, clip, state, progress, time, elapsed, sway, gesture, gestureProgress, gestureDirection);
         if (!ReferenceEquals(previous, _current))
         {
             if (previous?.PixelWidth != _current.PixelWidth)

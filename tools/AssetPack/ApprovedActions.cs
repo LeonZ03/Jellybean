@@ -38,6 +38,9 @@ internal static partial class Program
             Play("window-lie", "ledge", [-1, ..Range(1, 24)], 1050);
             Add("window-rest", "ledge", [24], [1000]);
             Play("window-rise", "ledge", [..Range(1, 24).Reverse(), -1], 950);
+
+            foreach (var gesture in new[] { "shift", "yawn", "roll", "curl", "ledge", "reach", "miss", "knead" })
+                Play("gesture-" + gesture, "gesture-" + gesture, Range(0, 36), 1000);
         }
 
         var blink = EvenDurations(1500, 17);
@@ -46,6 +49,7 @@ internal static partial class Program
         AddAction("pet", "pet", Range(0, 16), blink);
         AddAction("perch", "perch", Range(0, 38), EvenDurations(2600, 39));
         AddAction("peek", "pet", [0], [1000]);
+        AddAction("gesture-groom", "gesture-groom", Range(0, 36), EvenDurations(1000, 37));
     }
 
     private static void AddAction(string name, string atlas, int[] frames, int[] durations, bool mirror = false, string? standingClip = null)

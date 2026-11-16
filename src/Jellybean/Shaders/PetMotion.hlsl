@@ -13,6 +13,8 @@ float4 DetailShift : register(c9);
 float2 Eyes : register(c10);
 float EyeHeight : register(c11);
 float2 PickupOffset : register(c12);
+float4 GestureRegion : register(c13);
+float2 GestureShift : register(c14);
 
 float regionWeight(float2 uv, float4 region)
 {
@@ -34,6 +36,7 @@ float4 main(float2 uv : TEXCOORD) : COLOR
     float2 warped = poseUv + (breathWarp - Sway * belowNape * belowNape) / 240.0;
     warped -= DetailShift.xy * regionWeight(poseUv, HeadRegion);
     warped -= DetailShift.zw * regionWeight(poseUv, TailRegion);
+    warped -= GestureShift * regionWeight(poseUv, GestureRegion);
     float2 eyeDistance = abs(warped.x - Eyes);
     float eyeWidth = saturate(1.45 - min(eyeDistance.x, eyeDistance.y) * 44.0);
     float lid = warped.y - EyeHeight;
