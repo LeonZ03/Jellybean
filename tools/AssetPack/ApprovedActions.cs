@@ -39,8 +39,15 @@ internal static partial class Program
             Add("window-rest", "ledge", [24], [1000]);
             Play("window-rise", "ledge", [..Range(1, 24).Reverse(), -1], 950);
 
-            foreach (var gesture in new[] { "shift", "yawn", "roll", "curl", "ledge", "reach", "miss", "knead" })
+            foreach (var gesture in new[] { "shift", "ledge", "reach", "miss", "knead" })
                 Play("gesture-" + gesture, "gesture-" + gesture, Range(0, 36), 1000);
+
+            AddAction("gesture-yawn-" + direction, "gesture-yawn", [-1, 0, 1, 2, 3, 4, 5, 0, -1],
+                [72, 50, 93, 116, 235, 110, 100, 75, 149], mirror, "idle-" + direction);
+            AddAction("gesture-roll-" + direction, "gesture-roll", [-1, 0, 1, 6, 7, 2, 3, 4, 5, 4, 3, 2, 7, 6, 1, 0, -1],
+                [25, 32, 52, 31, 26, 30, 47, 62, 405, 52, 38, 27, 26, 27, 44, 37, 39], mirror, "doze-" + direction);
+            AddAction("gesture-curl-" + direction, "gesture-curl", [-1, 0, 1, 2, 3, 4, 5, 4, 3, 2, 1, 0, -1],
+                [30, 33, 50, 62, 48, 59, 475, 44, 34, 40, 44, 38, 43], mirror, "doze-" + direction);
         }
 
         var blink = EvenDurations(1500, 17);
@@ -49,7 +56,8 @@ internal static partial class Program
         AddAction("pet", "pet", Range(0, 16), blink);
         AddAction("perch", "perch", Range(0, 38), EvenDurations(2600, 39));
         AddAction("peek", "pet", [0], [1000]);
-        AddAction("gesture-groom", "gesture-groom", Range(0, 36), EvenDurations(1000, 37));
+        AddAction("gesture-groom", "gesture-groom", [-1, 0, 6, 7, 1, 2, 3, 2, 3, 2, 4, 5, 7, 6, 0, -1],
+            [50, 42, 45, 37, 55, 50, 66, 40, 70, 50, 203, 110, 44, 42, 40, 56], standingClip: "peek");
     }
 
     private static void AddAction(string name, string atlas, int[] frames, int[] durations, bool mirror = false, string? standingClip = null)

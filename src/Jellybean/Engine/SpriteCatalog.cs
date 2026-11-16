@@ -70,7 +70,7 @@ public sealed class SpriteCatalog
 
     private BitmapSource LoadFrame(Clip clip,int index)
     {
-        // The boundary pose comes from the same atlas as idle and the first walking frame.
+        // Reuse the exact idle or rest texture at an action boundary.
         if (index == -1) return Frame(clip.StandingClip!, 0);
         if (!_atlases.TryGetValue(clip.File,out var atlas))
         {

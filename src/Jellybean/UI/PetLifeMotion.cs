@@ -41,113 +41,148 @@ internal sealed class PetLifeMotion
         effect.BreathInverseExtent = new Point(size / _breathing.Width, size / _breathing.Height);
         effect.Sway = new Point(sway.X, sway.Y);
 
-        Point4D Region(double x, double y, double width, double height) => new(X(x) / size, y / size, size / width, size / height);
-        Point4D head = default, tail = default;
+        Point4D Region(double x, double y, double width, double height) =>
+            new(X(x) / size, y / size, Math.Sqrt(2) * size / width, Math.Sqrt(2) * size / height);
+        Point4D Joint(double x, double y, double angle, Vector shift = default, bool hinge = false)
+        {
+            var radians = angle * horizontal * Math.PI / 180;
+            var sin = Math.Sin(radians);
+            var cos = hinge ? 1 : Math.Cos(radians);
+            // Pack the inverse rigid transform as a displacement from the output pixel.
+            var pivotX = (X(x) + shift.X * horizontal) / size;
+            var pivotY = (y + shift.Y) / size;
+            return new(cos - 1, sin,
+                X(x) / size - cos * pivotX - sin * pivotY,
+                y / size + sin * pivotX - cos * pivotY);
+        }
+
+        Point4D head = default, tail = default, accent = default;
+        Point4D headMotion = default, tailMotion = default, accentMotion = default;
         var eyes = new Point();
         var eyeHeight = 0.0;
         var sleeping = clip.StartsWith("doze-", StringComparison.Ordinal);
         var onLedge = clip.StartsWith("window-rest-", StringComparison.Ordinal);
         var side = clip is "idle-left" or "idle-right" or "left-view" or "right-view";
+        var seated = clip == "perch";
+        var listening = Wave(time, 6.7, 1.2, .45);
+        var glance = Wave(time, 7.9, 3.5, 1.35);
+        var tailTwitch = Wave(time, onLedge ? 4.8 : 5.9, .6, .93);
+
         if (side)
         {
-            head = Region(177, 53, 34, 36); tail = Region(45, 145, 33, 23);
-            eyes = new Point(X(191) / size, X(191) / size); eyeHeight = 66.7;
+            tail = Region(48, 143, 35, 28);
+            tailMotion = Joint(66, 122, 5.0 * tailTwitch, hinge: true);
+            eyes = new Point(X(191) / size, X(191) / size);
+            eyeHeight = 66.7;
         }
         else if (onLedge)
         {
-            head = Region(171, 85, 28, 28); tail = Region(54, 203, 24, 36);
-            eyes = new Point(X(178) / size, X(178) / size); eyeHeight = 99.5;
+            tail = Region(52, 188, 31, 44);
+            tailMotion = Joint(57, 154, -5.5 * tailTwitch, hinge: true);
+            eyes = new Point(X(178) / size, X(178) / size);
+            eyeHeight = 99.5;
         }
-        else if (sleeping) head = Region(169, 111, 27, 24);
-        else if (clip is "front" or "front-three-quarter" or "rear" or "rear-three-quarter")
+        else if (clip == "front")
         {
-            var faceX = clip == "front-three-quarter" ? 82 : clip == "rear-three-quarter" ? 144 : 120;
-            head = Region(faceX, 54, 35, 35);
-            if (clip == "front") { eyes = new Point(112 / size, 128 / size); eyeHeight = 75; }
-            if (clip == "front-three-quarter") { eyes = new Point(75 / size, 90 / size); eyeHeight = 74.5; }
+            eyes = new Point(112 / size, 128 / size);
+            eyeHeight = 75;
+        }
+        else if (clip == "front-three-quarter")
+        {
+            eyes = new Point(75 / size, 90 / size);
+            eyeHeight = 74.5;
         }
 
-        var listening = Wave(time, 6.7, 1.2, .45);
-        var glance = Wave(time, 7.9, 3.5, 1.35);
-        var twitch = Wave(time, onLedge ? 4.8 : 5.9, .6, .93);
-        var headAmount = head.Z == 0 ? 0 : sleeping ? .5 : 1;
-        var tailAmount = tail.Z == 0 ? 0 : onLedge ? 3.5 : 2.8;
-        var headShift = new Vector(horizontal * headAmount * (.85 * listening + 1.35 * glance),
-            headAmount * (1.2 * listening - .6 * glance));
-        Point4D gestureRegion = default;
-        Vector gestureShift = default;
-        var squint = 0.0;
+        var turn = gestureDirection == 0 ? -1 : Math.Sign(gestureDirection);
+        var skull = clip switch
+        {
+            "idle-left" or "idle-right" or "left-view" or "right-view" => new Point(183, 61),
+            "front" or "rear" => new Point(120, 66),
+            "front-three-quarter" => new Point(82, 67),
+            "rear-three-quarter" => new Point(152, 59),
+            "perch" => new Point(115, 63),
+            _ => default
+        };
+        if (skull.X != 0)
+        {
+            var pivotX = side ? 167 : skull.X;
+            var pivotY = side ? 85 : 91;
+            var angle = 2.0 * glance;
+            var shift = new Vector();
+            if (gesture == PetGesture.Listen)
+            {
+                var lean = Envelope(gestureProgress, .15, .41, .55, 1);
+                var ear = Envelope(gestureProgress, 0, .10, .17, .40);
+                var earX = clip switch
+                {
+                    "front" or "rear" => 120 + 14 * turn,
+                    "front-three-quarter" => 71,
+                    "rear-three-quarter" => 162,
+                    "perch" => 108,
+                    _ => 181
+                };
+                var earY = clip == "perch" ? 51 : 48;
+                var towardSound = side || seated ? -1 : turn;
+                angle += (side || seated ? -8.0 : 10.0 * towardSound) * lean;
+                shift = new Vector(towardSound * (side ? 3.0 : 1.6), -.7) * lean;
+                accent = Region(earX, earY, side ? 13 : 12, 20);
+                accentMotion = Joint(earX, earY + 11, towardSound * 16 * ear, hinge: true);
+            }
+            else
+            {
+                var earX = side ? 181 : skull.X - 10;
+                var earY = clip == "perch" ? 51 : 48;
+                accent = Region(earX, earY, 12, 20);
+                accentMotion = Joint(earX, earY + 11, -8 * listening, hinge: true);
+                if (gesture == PetGesture.Sniff && (side || seated))
+                {
+                    var reach = Envelope(gestureProgress, 0, .24, .74, 1);
+                    var sniff = Pulse(gestureProgress, .25, .46) + Pulse(gestureProgress, .48, .70);
+                    angle -= 4 * reach + 5 * sniff;
+                    shift = new Vector(3.4 * reach, .6 * reach - 1.1 * sniff);
+                }
+            }
 
-        if (gesture == PetGesture.Listen && (side || clip is "perch" or "front" or "front-three-quarter" or "rear" or "rear-three-quarter"))
-        {
-            var turn = gestureDirection == 0 ? -1 : Math.Sign(gestureDirection);
-            var (faceX, faceY, earX, earY, direction) = clip switch
-            {
-                "perch" => (118, 70, 122, 57, -1),
-                "front" => (120, 66, 120 - 13 * turn, 47, turn),
-                "front-three-quarter" => (82, 68, 70, 48, 1),
-                "rear" => (120, 62, 120 - 12 * turn, 49, turn),
-                "rear-three-quarter" => (144, 63, 154, 49, -1),
-                "left-view" or "right-view" => (168, 66, 166, 47, -horizontal),
-                _ => (183, 65, 182, 45, -horizontal)
-            };
-            var ear = Envelope(gestureProgress, 0, .10, .19, .42);
-            var look = Envelope(gestureProgress, .17, .42, .56, 1);
-            head = Region(faceX, faceY, 36, 36);
-            headShift += new Vector(direction * 8, -1.9) * look;
-            gestureRegion = Region(earX, earY, 14, 18);
-            gestureShift = new Vector(direction * 4.0, -2.0) * ear;
+            // The head moves as a unit. Across the lower margin the movement falls off into the neck.
+            head = Region(skull.X, skull.Y, side ? 55 : 43, 51);
+            headMotion = Joint(pivotX, pivotY, angle, shift);
         }
-        else if (gesture == PetGesture.Sniff && (side || clip == "perch"))
+        else if (sleeping || onLedge)
         {
-            var (faceX, faceY, noseX, noseY) = clip switch
+            var earX = onLedge ? 168 : 172;
+            var earY = onLedge ? 81 : 111;
+            accent = Region(earX, earY, onLedge ? 18 : 32, 23);
+            var ear = gesture == PetGesture.DreamTwitch
+                ? Pulse(gestureProgress, .10, .32) - .40 * Pulse(gestureProgress, .32, .46)
+                : .38 * listening;
+            accentMotion = Joint(earX - 2, earY + 12, 14 * ear, hinge: true);
+            if (gesture == PetGesture.DreamTwitch)
             {
-                "perch" => (120, 72, 131, 76),
-                "left-view" or "right-view" => (171, 73, 191, 78),
-                _ => (183, 71, 198, 74)
-            };
-            var reach = Envelope(gestureProgress, 0, .26, .76, 1);
-            var sniff = Pulse(gestureProgress, .25, .46) + Pulse(gestureProgress, .48, .70);
-            head = Region(faceX, faceY, 40, 39);
-            headShift += new Vector(horizontal * 5.0, .9) * reach;
-            gestureRegion = Region(noseX + 2.5 * reach, noseY, 15, 14);
-            gestureShift = new Vector(horizontal * 2.4, -1.9) * sniff;
-        }
-        else if (gesture == PetGesture.DreamTwitch && (sleeping || onLedge))
-        {
-            var (earX, earY, pawX) = onLedge ? (166, 80, 160) : (167, 111, 159);
-            var ear = Pulse(gestureProgress, .13, .35) - .45 * Pulse(gestureProgress, .35, .49);
-            var paw = Pulse(gestureProgress, .32, .54) - .25 * Pulse(gestureProgress, .54, .68);
-            head = Region(earX, earY, 14, 17);
-            headShift += new Vector(-horizontal * 3.1, 1.8) * ear;
-            gestureRegion = Region(pawX, 157, 14, 12);
-            gestureShift = new Vector(horizontal * 2.1, -1.7) * paw;
+                var paw = Pulse(gestureProgress, .31, .56) - .24 * Pulse(gestureProgress, .56, .71);
+                head = Region(onLedge ? 157 : 169, 155, 23, 9);
+                headMotion = Joint(onLedge ? 145 : 154, 156, -4 * paw, new Vector(1.5, -.6) * paw);
+            }
         }
         else if (gesture == PetGesture.Nuzzle && clip == "pet")
         {
-            var direction = gestureDirection == 0 ? -1 : Math.Sign(gestureDirection);
             var lean = Envelope(gestureProgress, 0, .32, .65, 1);
-            var rub = Pulse(gestureProgress, .30, .78);
-            head = Region(105, 76, 35, 37);
-            headShift = new Vector(direction * 6.4, -1.5) * lean;
-            gestureRegion = Region(100, 69, 28, 22);
-            gestureShift = new Vector(direction * 2.2, -2.2) * rub;
-            eyes = new Point(94 / size, 105 / size);
-            eyeHeight = 78;
-            squint = 2.5 * Envelope(gestureProgress, .02, .23, .70, .98);
+            var rub = Pulse(gestureProgress, .32, .73);
+            head = Region(106, 65, 48, 54);
+            headMotion = Joint(110, 94, turn * (9.5 * lean + 2.3 * rub),
+                new Vector(turn * 2.6 * lean, -1.2 * rub));
         }
 
         effect.HeadRegion = head;
         effect.TailRegion = tail;
-        effect.DetailShift = new Point4D(headShift.X / size, headShift.Y / size,
-            horizontal * tailAmount * twitch / size, -.64 * tailAmount * twitch / size);
-        effect.GestureRegion = gestureRegion;
-        effect.GestureShift = new Point(gestureShift.X / size, gestureShift.Y / size);
+        effect.HeadMotion = headMotion;
+        effect.TailMotion = tailMotion;
+        effect.GestureRegion = accent;
+        effect.GestureMotion = accentMotion;
         effect.Eyes = eyes;
         effect.EyeHeight = eyeHeight / size;
         var blinking = (time + .54 * Math.Sin(time * .89)) % (onLedge ? 5.2 : 4.2) - 1.8;
         var blink = eyeHeight == 0 ? 0 : 3.7 * Smooth(blinking / .08) * (1 - Smooth((blinking - .11) / .14));
-        effect.Blink = Math.Max(blink, squint);
+        effect.Blink = blink;
     }
 
     private static double Envelope(double progress, double start, double open, double close, double end) =>
