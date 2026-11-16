@@ -93,6 +93,15 @@ internal static class Program
             MotionPreview.CheckRenderer(sprites);
             Check(true,"standing and prone breathing move the torso while paws stay planted");
             Check(true,"the rendered hanging body moves around a fixed grip");
+            foreach (var direction in new[] { "left", "right" })
+            {
+                var idle = sprites.Frame("idle-" + direction, 0);
+                Check(new[] { "lie", "window-lie", "stretch", "takeoff" }.All(clip =>
+                    ReferenceEquals(idle, sprites.Frame(clip + "-" + direction, 0))) &&
+                    new[] { "rise", "window-rise", "stretch" }.All(clip =>
+                    ReferenceEquals(idle, sprites.Frame(clip + "-" + direction, 3, false))),
+                    $"{direction} transitions share the approved standing frame");
+            }
             foreach(var clip in new[]{"front","walk-left","walk-right","pounce-left","pounce-right","doze-left","pet","perch","stretch-right","rear"})
             {
                 var frame=sprites.Frame(clip,.8);

@@ -27,19 +27,23 @@ internal static partial class Program
         PackApprovedWalk("walk-left","design/walk-transfer/atlas-fur-50-left.png");
         PackApprovedWalk("walk-right","design/walk-transfer/atlas-fur-50.png");
         var body=Load("assets/animations/v2/turnaround.png");
-        var regions=new[]{new Int32Rect(130,0,230,486),new Int32Rect(460,0,443,486),new Int32Rect(903,0,633,486),new Int32Rect(12,488,540,536),new Int32Rect(620,488,240,536),new Int32Rect(965,488,500,536)};
-        var views=regions.Select(r=>Isolate(new CroppedBitmap(body,r))).ToArray();
-        var names=new[]{"front","front-three-quarter","left-view","right-view","rear","rear-three-quarter"};
-        for(var i=0;i<views.Length;i++)
+        var views=new[]
         {
-            var b=Bounds(views[i]); var s=124/b.Height;
-            var side=i==2 || i==3;
-            var xOffset=i==2?-4:i==3?4:0;
-            Save(names[i],new[]{Draw(CoatPalette.MatchWalk(views[i]),(b.Left+b.Right)/2,b.Bottom,s,side?1.06:1,xOffset)},new[]{1000});
+            ("front",new Int32Rect(130,0,230,486)), ("front-three-quarter",new Int32Rect(460,0,443,486)),
+            ("rear",new Int32Rect(620,488,240,536)), ("rear-three-quarter",new Int32Rect(965,488,500,536))
+        };
+        foreach (var (name,region) in views)
+        {
+            var view=Isolate(new CroppedBitmap(body,region));
+            var b=Bounds(view); var s=124/b.Height;
+            Save(name,new[]{Draw(CoatPalette.MatchWalk(view),(b.Left+b.Right)/2,b.Bottom,s)},new[]{1000});
         }
         AddApprovedActions();
         foreach(var direction in new[]{"left","right"})
+        {
             Alias("idle-"+direction,"walk-"+direction,new[]{0},new[]{1000});
+            Alias(direction+"-view","walk-"+direction,new[]{0},new[]{1000});
+        }
         var options=new JsonSerializerOptions{WriteIndented=true};
         File.WriteAllText(Path.Combine(Output,"animations.json"),JsonSerializer.Serialize(new{width=Width,height=Height,anchor=Anchor,foot=Foot,walkStrideLeft=WalkStride,walkStrideRight=WalkStride,clips=Clips},options));
         Directory.CreateDirectory(Path.Combine(Root,"artifacts"));

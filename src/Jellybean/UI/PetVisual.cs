@@ -7,25 +7,12 @@ namespace Jellybean.UI;
 
 public sealed class PetVisual : FrameworkElement
 {
-    private readonly record struct Breathing(double X, double Y, double Width, double Height, double Depth)
-    {
-        public static Breathing Blend(Breathing from, Breathing to, double amount) => new(
-            Lerp(from.X, to.X, amount), Lerp(from.Y, to.Y, amount),
-            Lerp(from.Width, to.Width, amount), Lerp(from.Height, to.Height, amount),
-            Lerp(from.Depth, to.Depth, amount));
-
-        private static double Lerp(double from, double to, double amount) => from + (to - from) * amount;
-    }
-
-    private static readonly Breathing Standing = new(136, 87, 58, 49, 1.5);
-    private static readonly Breathing Sleeping = new(112, 114, 59, 37, 3.3);
-    private static readonly Breathing Ledge = new(103, 121, 55, 34, 2.9);
     private readonly PetMotionEffect _motion = new();
+    private readonly PetLifeMotion _life = new();
     private readonly ImageBrush _previousBrush = new() { Stretch = Stretch.Fill };
     private BitmapSource? _current, _transitionFrom;
     private string _clip = "";
     private double _blendStart, _blendDuration, _time;
-    private Breathing _breathing;
     public BitmapSource? CurrentFrame => _current;
     public BitmapSource? PreviousFrame => _previousBrush.ImageSource as BitmapSource;
 
@@ -60,16 +47,17 @@ public sealed class PetVisual : FrameworkElement
 
     private void Present(SpriteSample sample, string clip, double time, PetState state, double progress, Vector sway)
     {
-        var dt = Math.Clamp(time - _time, 0, .1); _time = time;
-        RenderOptions.SetBitmapScalingMode(this,sample.From.PixelWidth>SpriteCatalog.Width
-            ? BitmapScalingMode.HighQuality : BitmapScalingMode.NearestNeighbor);
-        var target = BreathingFor(clip, state, progress);
-        _breathing = _current is null ? target : Breathing.Blend(_breathing, target, 1 - Math.Exp(-dt * 14));
+        var elapsed = _current is null ? 0 : Math.Max(0, time - _time);
+        _time = time;
+        var previous = _current;
         if (clip != _clip)
         {
-            _transitionFrom = Capture();
+            var samePose = _transitionFrom is null && ReferenceEquals(_current, sample.From) && sample.Blend == 0 &&
+                (_motion.Mix == 1 || ReferenceEquals(_previousBrush.ImageSource, _current));
+            _transitionFrom = samePose ? null : Capture();
             _clip=clip; _blendStart=time;
-            _blendDuration=state is PetState.Pounce or PetState.Jump or PetState.Catch or PetState.Land?.045:state==PetState.Drag?.16:.14;
+            _blendDuration=state is PetState.Pounce or PetState.Jump or PetState.Catch or PetState.Land ? .045 :
+                state == PetState.Drag ? .16 : .095;
         }
         var phase=Math.Clamp((time-_blendStart)/Math.Max(.001,_blendDuration),0,1);
         if (_transitionFrom is not null && phase<1)
@@ -83,32 +71,14 @@ public sealed class PetVisual : FrameworkElement
             _current=sample.To; _previousBrush.ImageSource=sample.From;
             _motion.Mix=sample.Blend; _motion.PreviousFrozen=0;
         }
-        _motion.Breath = (.5 - .5 * Math.Cos(time * Math.Tau / 3.8)) * _breathing.Depth;
-        _motion.BreathCenter = new Point(_breathing.X / Width, _breathing.Y / Height);
-        _motion.BreathInverseExtent = new Point(Width / _breathing.Width, Height / _breathing.Height);
-        _motion.Ear = state == PetState.Idle ? Math.Pow(Math.Max(0, Math.Sin(time * .65)), 24) * .45 : 0;
-        _motion.Sway = new Point(sway.X, sway.Y);
-        InvalidateVisual();
-    }
-
-    private static Breathing BreathingFor(string clip, PetState state, double progress)
-    {
-        var rest = clip.StartsWith("window-", StringComparison.Ordinal) ? Ledge : Sleeping;
-        var pose = state switch
+        _life.Apply(_motion, clip, state, progress, time, elapsed, sway);
+        if (!ReferenceEquals(previous, _current))
         {
-            PetState.Doze => rest,
-            PetState.LieDown or PetState.Rise => Breathing.Blend(Standing, rest, progress),
-            PetState.Pet or PetState.Perch or PetState.Peek => new(120, 110, 31, 46, 1.5),
-            PetState.Drag => new(116, 91, 32, 42, 1.2),
-            PetState.HuntAim or PetState.Catch => new(136, 119, 51, 34, 1.4),
-            PetState.Stalk or PetState.Pounce => new(136, 116, 55, 38, .7),
-            PetState.Stretch => Breathing.Blend(Standing, new(117, 101, 68, 43, 1.3), progress),
-            PetState.Walk or PetState.ApproachJump or PetState.Jump or PetState.Fall or PetState.Land => Standing with { Depth = .65 },
-            _ when clip is "front" or "front-three-quarter" or "rear" or "rear-three-quarter" => new(120, 101, 38, 49, 1.5),
-            _ => Standing
-        };
-        return clip.EndsWith("-left", StringComparison.Ordinal) || clip == "left-view"
-            ? pose with { X = SpriteCatalog.Width - pose.X } : pose;
+            if (previous?.PixelWidth != _current.PixelWidth)
+                RenderOptions.SetBitmapScalingMode(this, _current.PixelWidth > SpriteCatalog.Width
+                    ? BitmapScalingMode.HighQuality : BitmapScalingMode.NearestNeighbor);
+            InvalidateVisual();
+        }
     }
 
     protected override void OnRender(DrawingContext dc)

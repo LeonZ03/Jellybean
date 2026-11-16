@@ -10,7 +10,7 @@ public readonly record struct SpriteSample(BitmapSource From, BitmapSource To, d
 
 public sealed class SpriteCatalog
 {
-    private sealed record Clip(string File,int Columns,int[] Frames,int[] Durations,int BlendMilliseconds,int Scale,bool Mirror)
+    private sealed record Clip(string File,int Columns,int[] Frames,int[] Durations,int BlendMilliseconds,int Scale,bool Mirror,string? StandingClip)
     {
         public int Duration { get; } = Durations.Sum();
     }
@@ -38,8 +38,9 @@ public sealed class SpriteCatalog
             var blend=entry.Value.TryGetProperty("blendMilliseconds",out var blendTime)?blendTime.GetInt32():45;
             var scale=entry.Value.TryGetProperty("scale",out var frameScale)?frameScale.GetInt32():1;
             var mirror=entry.Value.TryGetProperty("mirror",out var reflected)&&reflected.GetBoolean();
+            var standingClip=entry.Value.TryGetProperty("standingClip",out var standing)?standing.GetString():null;
             _clips[entry.Name] = new Clip(name,columns,entry.Value.GetProperty("frames").EnumerateArray().Select(i=>i.GetInt32()).ToArray(),
-                entry.Value.GetProperty("durations").EnumerateArray().Select(d=>d.GetInt32()).ToArray(),blend,scale,mirror);
+                entry.Value.GetProperty("durations").EnumerateArray().Select(d=>d.GetInt32()).ToArray(),blend,scale,mirror,standingClip);
         }
     }
 
@@ -69,6 +70,8 @@ public sealed class SpriteCatalog
 
     private BitmapSource LoadFrame(Clip clip,int index)
     {
+        // The boundary pose comes from the same atlas as idle and the first walking frame.
+        if (index == -1) return Frame(clip.StandingClip!, 0);
         if (!_atlases.TryGetValue(clip.File,out var atlas))
         {
             if (_atlases.Count==AtlasCacheSize)

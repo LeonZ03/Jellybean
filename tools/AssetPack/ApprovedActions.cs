@@ -10,11 +10,12 @@ internal static partial class Program
         {
             var mirror = direction == "left";
             void Add(string clip, string atlas, int[] frames, int[] durations) =>
-                AddAction(clip + "-" + direction, atlas, frames, durations, mirror);
+                AddAction(clip + "-" + direction, atlas, frames, durations, mirror,
+                    frames.Contains(-1) ? "idle-" + direction : null);
             void Play(string clip, string atlas, int[] frames, int milliseconds) =>
                 Add(clip, atlas, frames, EvenDurations(milliseconds, frames.Length));
 
-            Play("takeoff", "jump", Range(0, 8), 260);
+            Play("takeoff", "jump", [-1, ..Range(1, 8)], 260);
             Play("air", "jump", Range(8, 32), 320);
             Play("fall", "jump", Range(26, 31), 200);
             Play("land", "jump", Range(32, 40), 280);
@@ -27,14 +28,13 @@ internal static partial class Program
             Play("catch", "hunt", Range(37, 40), 180);
             Play("held", "held", Range(0, 38), 2600);
 
-            Play("stretch", "stretch", Range(0, 40), 2800);
-            Play("lie", "sleep", Range(0, 40), 1500);
+            Play("stretch", "stretch", [-1, ..Range(1, 39), -1], 2800);
+            Play("lie", "sleep", [-1, ..Range(1, 40)], 1500);
             Add("doze", "sleep", [40], [1000]);
-            Play("rise", "sleep", Range(0, 40).Reverse().ToArray(), 1100);
-            Play("window-lie", "ledge", Range(0, 24), 1050);
-            var resting = Range(24, 40).Concat(Range(25, 39).Reverse()).ToArray();
-            Play("window-rest", "ledge", resting, 4300);
-            Play("window-rise", "ledge", Range(0, 24).Reverse().ToArray(), 950);
+            Play("rise", "sleep", [..Range(1, 40).Reverse(), -1], 1100);
+            Play("window-lie", "ledge", [-1, ..Range(1, 24)], 1050);
+            Add("window-rest", "ledge", [24], [1000]);
+            Play("window-rise", "ledge", [..Range(1, 24).Reverse(), -1], 950);
         }
 
         var blink = EvenDurations(1500, 17);
@@ -45,12 +45,12 @@ internal static partial class Program
         AddAction("peek", "pet", [0], [1000]);
     }
 
-    private static void AddAction(string name, string atlas, int[] frames, int[] durations, bool mirror = false)
+    private static void AddAction(string name, string atlas, int[] frames, int[] durations, bool mirror = false, string? standingClip = null)
     {
         var file = $"actions/{atlas}.png";
         if (!File.Exists(Path.Combine(Output, file)))
             throw new FileNotFoundException("Approved action atlas is missing.", file);
-        Clips[name] = new { file, columns = 6, frames, durations, blendMilliseconds = 0, scale = 2, mirror };
+        Clips[name] = new { file, columns = 6, frames, durations, blendMilliseconds = 0, scale = 2, mirror, standingClip };
     }
 
     private static int[] Range(int first, int last) => Enumerable.Range(first, last - first + 1).ToArray();
