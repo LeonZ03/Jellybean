@@ -28,17 +28,19 @@ public sealed class PetVisual : FrameworkElement
     {
         var clip = engine.Animation;
         var state = engine.State;
+        var lifting = clip.StartsWith("pickup-", StringComparison.Ordinal);
         var progress = state switch
         {
             PetState.LieDown => engine.LieProgress,
             PetState.Rise => 1 - engine.RiseProgress,
             PetState.Stretch => Math.Sin(Math.PI * Math.Clamp(engine.Age / 2.8, 0, 1)),
+            PetState.Drag when lifting => Math.Clamp(engine.Age / PetEngine.PickupSeconds, 0, 1),
             _ => 1.0
         };
         var sway = state == PetState.Drag ? engine.DragSway :
             state == PetState.Fall && clip.StartsWith("held-", StringComparison.Ordinal)
                 ? engine.DragSway * Math.Max(0, 1 - engine.Age / .08) : default;
-        Present(sprites.Sample(clip, engine.RenderAge, engine.LoopAnimation), clip, engine.AliveTime, state, progress, sway);
+        Present(sprites.Sample(clip, engine.RenderAge, engine.LoopAnimation), clip, engine.AliveTime, state, progress, lifting ? sway * progress : sway);
     }
 
     public void Present(BitmapSource frame, string clip, double time, PetState state) =>
@@ -56,8 +58,9 @@ public sealed class PetVisual : FrameworkElement
         {
             var samePose = _transitionFrom is null && ReferenceEquals(_current, sample.From) && sample.Blend == 0 &&
                 (_motion.Mix == 1 || ReferenceEquals(_previousBrush.ImageSource, _current));
-            _transitionFrom = samePose ? null : Capture();
-            _pickupOffset = state == PetState.Drag && _transitionFrom is not null
+            _transitionFrom = state == PetState.Drag || samePose ? null : Capture();
+            _pickupOffset = state == PetState.Drag && _current is not null && clip.StartsWith("held-", StringComparison.Ordinal) &&
+                !_clip.StartsWith("pickup-", StringComparison.Ordinal)
                 ? new Point((_nape.X - HeldNape.X) / Width, (_nape.Y - HeldNape.Y) / Height) : default;
             _clip=clip; _blendStart=time;
             _blendDuration=state is PetState.Pounce or PetState.Jump or PetState.Catch or PetState.Land ? .045 :
@@ -68,15 +71,15 @@ public sealed class PetVisual : FrameworkElement
         {
             _current=sample.From; _previousBrush.ImageSource=_transitionFrom;
             _motion.Mix=phase*phase*(3-2*phase); _motion.PreviousFrozen=1;
-            _motion.PickupOffset = _pickupOffset;
         }
         else
         {
             _transitionFrom=null;
             _current=sample.To; _previousBrush.ImageSource=sample.From;
             _motion.Mix=sample.Blend; _motion.PreviousFrozen=0;
-            _motion.PickupOffset = default;
         }
+        var offset = state == PetState.Drag ? 1 - phase * phase * (3 - 2 * phase) : 0;
+        _motion.PickupOffset = new Point(_pickupOffset.X * offset, _pickupOffset.Y * offset);
         _nape = NapeFor(clip, state, progress);
         _life.Apply(_motion, clip, state, progress, time, elapsed, sway);
         if (!ReferenceEquals(previous, _current))
@@ -98,6 +101,7 @@ public sealed class PetVisual : FrameworkElement
             PetState.Doze => resting,
             PetState.LieDown or PetState.Rise => standing + (resting - standing) * progress,
             PetState.Stretch => standing + new Vector(3, 30) * progress,
+            PetState.Drag => standing + (HeldNape - standing) * progress,
             PetState.Pet or PetState.Peek => new(111, 87),
             PetState.Perch => new(116, 88),
             PetState.HuntAim or PetState.Stalk or PetState.Pounce or PetState.Catch => new(169, 119),

@@ -26,6 +26,9 @@ internal static partial class Program
             Add("pounce", "hunt", Range(16, 40),
                 EvenDurations(100, 5).Concat(EvenDurations(280, 20)).ToArray());
             Play("catch", "hunt", Range(37, 40), 180);
+            var pickup = new[] { -1 }.Concat(Range(0, 16)).ToArray();
+            AddAction("pickup-" + direction, "pickup-" + direction, pickup,
+                EvenDurations(300, pickup.Length), standingClip: "idle-" + direction);
             Play("held", "held", Range(0, 38), 2600);
 
             Play("stretch", "stretch", [-1, ..Range(1, 39), -1], 2800);

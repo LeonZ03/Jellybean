@@ -96,7 +96,7 @@ internal static class Program
             foreach (var direction in new[] { "left", "right" })
             {
                 var idle = sprites.Frame("idle-" + direction, 0);
-                Check(new[] { "lie", "window-lie", "stretch", "takeoff" }.All(clip =>
+                Check(new[] { "lie", "window-lie", "stretch", "takeoff", "pickup" }.All(clip =>
                     ReferenceEquals(idle, sprites.Frame(clip + "-" + direction, 0))) &&
                     new[] { "rise", "window-rise", "stretch" }.All(clip =>
                     ReferenceEquals(idle, sprites.Frame(clip + "-" + direction, 3, false))),
@@ -137,8 +137,13 @@ internal static class Program
         engine.Walk(); var x=engine.CenterX;
         for(var i=0;i<8;i++) engine.Tick(.03);
         Check(Math.Abs(Math.Abs(engine.CenterX-x)-engine.RenderAge/PetEngine.WalkCycleSeconds*engine.WalkStride)<.01,"walk phase follows real distance through acceleration");
-        engine.BeginDrag(); engine.Tick(.2);
-        Check(engine.State==PetState.Drag && engine.Animation.StartsWith("held-"),"drag uses a dedicated hanging body pose");
+        engine.BeginDrag(); engine.Tick(.15);
+        var pickup = sprites.Sample(engine.Animation,engine.RenderAge,engine.LoopAnimation);
+        Check(engine.State==PetState.Drag && engine.Animation.StartsWith("pickup-") &&
+            pickup.Blend==0 && ReferenceEquals(pickup.From,pickup.To),"the pickup midpoint is a single authored pose");
+        engine.Tick(.16);
+        Check(engine.State==PetState.Drag && engine.Animation.StartsWith("held-") && engine.RenderAge<.03,
+            "the pickup enters the hanging loop from its first pose");
         const double tick=1.0/60;
         var grip=new Point(engine.CenterX,engine.FeetY);
         var handVelocity=new Vector();

@@ -19,6 +19,7 @@ internal sealed class PetLifeMotion
     private static readonly Breath Standing = new(136, 90, 58, 50, 1.8, 2.9);
     private static readonly Breath Sleeping = new(111, 111, 57, 38, 4.1, 4.1);
     private static readonly Breath Ledge = new(105, 119, 54, 37, 3.5, 3.5);
+    private static readonly Breath Hanging = new(115, 102, 39, 46, 1.4, 2.8);
     private Breath _breathing;
     private double _phase;
 
@@ -101,7 +102,7 @@ internal sealed class PetLifeMotion
             PetState.Doze => rest,
             PetState.LieDown or PetState.Rise => Breath.Blend(Standing, rest, progress),
             PetState.Pet or PetState.Perch or PetState.Peek => new(120, 111, 31, 47, 1.8, 3.0),
-            PetState.Drag => new(115, 102, 39, 46, 1.4, 2.8),
+            PetState.Drag => Breath.Blend(Standing, Hanging, progress),
             PetState.HuntAim or PetState.Catch => new(135, 119, 51, 34, 1.6, 2.5),
             PetState.Stalk or PetState.Pounce => new(135, 116, 55, 38, .9, 2.4),
             PetState.Stretch => Breath.Blend(Standing, new(117, 101, 68, 43, 1.5, 3.0), progress),

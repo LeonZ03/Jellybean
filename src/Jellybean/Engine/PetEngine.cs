@@ -8,6 +8,7 @@ public enum PetState { Idle, Walk, LieDown, Doze, Rise, Perch, Pet, Stretch, Fal
 public sealed class PetEngine
 {
     public const double WalkCycleSeconds = 1.2;
+    internal const double PickupSeconds = .30;
     private const double TakeoffSeconds = .26, AirClipSeconds = .32, PounceWindup = .10;
     private const double FloorLieSeconds = 1.5, WindowLieSeconds = 1.05;
     private const double FloorRiseSeconds = 1.1, WindowRiseSeconds = .95;
@@ -28,7 +29,7 @@ public sealed class PetEngine
     private double _launchX, _approachSpeed, _pounceDuration, _pounceHeight, _huntDistance;
     private Point _targetOrigin, _dragStart, _dragTarget;
     private Vector _dragVelocity, _dragSwayVelocity;
-    private bool _toyActive, _restOnWindow, _fallLoop, _caughtToy;
+    private bool _toyActive, _restOnWindow, _fallLoop, _caughtToy, _pickupFromStanding;
     private double _toyLifetime, _peekGround, _effectRemaining;
     private string? _angle;
     private string _fallAnimation = "idle-left";
@@ -63,6 +64,7 @@ public sealed class PetEngine
     {
         PetState.Walk or PetState.ApproachJump => _walkDistance / WalkStride * WalkCycleSeconds,
         PetState.Stalk => _huntDistance / 42,
+        PetState.Drag when _pickupFromStanding && Age >= PickupSeconds => Age - PickupSeconds,
         PetState.Rise => Age + _riseOffset,
         PetState.Fall when Age < .08 => _fallAge,
         PetState.Jump when Age >= TakeoffSeconds => (Age - TakeoffSeconds) / _jumpDuration * AirClipSeconds,
@@ -284,6 +286,10 @@ public sealed class PetEngine
     private void SetState(PetState state, double duration = 0) { State = state; _angle = null; Age = 0; _actionDuration = duration; }
     public void BeginDrag()
     {
+        _pickupFromStanding = State is (PetState.Idle or PetState.Walk or PetState.ApproachJump) &&
+            _angle is (null or "left-view" or "right-view");
+        if (_angle == "left-view") Facing = -1;
+        if (_angle == "right-view") Facing = 1;
         Interact(); FinishPeek(); StopToy(); _afterRise = null; _support = null; _velocityY = 0; SetState(PetState.Drag);
         _dragStart=_dragTarget=new Point(CenterX,FeetY);
         _dragVelocity=_dragSwayVelocity=DragSway=default;
@@ -463,7 +469,9 @@ public sealed class PetEngine
         PetState.Jump => Facing < 0 ? "air-left" : "air-right",
         PetState.Fall when Age < .08 => _fallAnimation,
         PetState.Fall => Facing < 0 ? "fall-left" : "fall-right",
-        PetState.Peek => "peek", PetState.Drag => Facing<0?"held-left":"held-right",
+        PetState.Peek => "peek",
+        PetState.Drag when _pickupFromStanding && Age < PickupSeconds => "pickup" + Direction,
+        PetState.Drag => "held" + Direction,
         _ => Facing < 0 ? "idle-left" : "idle-right"
     });
 }

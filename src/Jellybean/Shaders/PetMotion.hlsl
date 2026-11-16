@@ -23,8 +23,7 @@ float regionWeight(float2 uv, float4 region)
 
 float4 main(float2 uv : TEXCOORD) : COLOR
 {
-    // Align both napes at the same point while the previous pose lifts into the hanging pose.
-    float2 poseUv = uv - PickupOffset * (1.0 - Mix);
+    float2 poseUv = uv - PickupOffset;
     float y = poseUv.y * 240.0;
     float2 fromChest = (poseUv - BreathCenter) * BreathInverseExtent;
     float chestWeight = saturate(1.0 - dot(fromChest, fromChest));
@@ -40,7 +39,7 @@ float4 main(float2 uv : TEXCOORD) : COLOR
     float lid = warped.y - EyeHeight;
     float eyeHeight = saturate(1.0 - abs(lid) * 34.0);
     warped.y += Blink * eyeWidth * eyeHeight * clamp(lid, -.009, .009);
-    float4 oldPose = tex2D(Previous, lerp(warped, uv, PreviousFrozen) + PickupOffset * Mix);
+    float4 oldPose = tex2D(Previous, lerp(warped, uv, PreviousFrozen));
     float4 newPose = tex2D(Current, warped);
     // Both samples are premultiplied: a solid overlapping body stays solid during the blend.
     return lerp(oldPose, newPose, Mix);
