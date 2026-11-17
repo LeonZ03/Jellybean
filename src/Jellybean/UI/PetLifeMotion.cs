@@ -36,7 +36,7 @@ internal sealed class PetLifeMotion
         _breathing = _breathing.Period == 0 ? target : Breath.Blend(_breathing, target, easing);
         _phase = (_phase + Math.Tau * elapsed / _breathing.Period) % Math.Tau;
         var pulse = (.5 - .5 * Math.Cos(_phase)) * (.94 + .06 * Math.Cos(time * .91));
-        effect.Breath = pulse * _breathing.Depth;
+        effect.Breath = clip.StartsWith("fall-roll-", StringComparison.Ordinal) ? 0 : pulse * _breathing.Depth;
         effect.BreathCenter = new Point(_breathing.X / size, _breathing.Y / size);
         effect.BreathInverseExtent = new Point(size / _breathing.Width, size / _breathing.Height);
         effect.Sway = new Point(sway.X, sway.Y);

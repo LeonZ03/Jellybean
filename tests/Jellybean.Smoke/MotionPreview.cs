@@ -42,8 +42,8 @@ internal static class MotionPreview
             var jumper=Actor(windows); PlaceActor(jumper,support.Left+support.Width/2,support.Top);
             var views=Enumerable.Range(0,6).Select(_=>new PetVisual()).ToArray();
             foreach(var view in views) { view.Measure(new Size(240,240)); view.Arrange(new Rect(0,0,240,240)); view.UpdateLayout(); }
-            var labels=new[]{"糖豆走路 · 毛色 50","走到边缘 → 提速 → 跳窗","小落差正常站稳 · 高落差缓冲","拎起后自然下垂 · 跟随惯性轻摆","观察 → 慢慢接近 → 扑击","淡黄色气泡 · 按文本调整大小"};
-            var bubble=new SpeechBubble(); bool walk=false,jump=false,returnJump=false,low=false,high=false,held=false,released=false,hunt=false;
+            var labels=new[]{"糖豆走路 · 毛色 50","走到边缘 → 提速 → 跳窗","低处直接落地 · 高处先翻身","拎起后自然下垂 · 跟随惯性轻摆","观察 → 慢慢接近 → 扑击","淡黄色气泡 · 按文本调整大小"};
+            var bubble=new SpeechBubble(); bool walk=false,jump=false,returnJump=false,low=false,liftForDrop=false,high=false,held=false,released=false,hunt=false;
             const int fps=60;
             for(var n=0;n<fps*9;n++)
             {
@@ -52,7 +52,8 @@ internal static class MotionPreview
                 if(t>=.4&&!jump) { jumper.JumpToWindow(false); jump=true; }
                 if(t>=5.2&&!returnJump) { jumper.JumpToWindow(false); returnJump=true; }
                 if(t>=.5&&!low) { actors[1].BeginDrag(); actors[1].DragTo(starts[1],area.Bottom-60); actors[1].EndDrag(); low=true; }
-                if(t>=3.5&&!high) { actors[1].BeginDrag(); actors[1].DragTo(starts[1],area.Bottom-180); actors[1].EndDrag(); high=true; }
+                if(t>=3.0&&!liftForDrop) { actors[1].BeginDrag(); actors[1].DragTo(starts[1],area.Bottom-180); liftForDrop=true; }
+                if(t>=3.5&&!high) { actors[1].EndDrag(); high=true; }
                 if(t>=.4&&!held) { actors[2].BeginDrag(); held=true; }
                 if(held&&!released) actors[2].DragTo(starts[2]+Math.Sin(t*1.7)*48,area.Bottom-55+Math.Sin(t*2)*7);
                 if(t>=6.5&&!released) { actors[2].EndDrag(); released=true; }

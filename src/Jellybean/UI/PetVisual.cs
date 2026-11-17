@@ -84,8 +84,8 @@ public sealed class PetVisual : FrameworkElement
         {
             var samePose = _transitionFrom is null && ReferenceEquals(_current, sample.From) && sample.Blend == 0 &&
                 (_motion.Mix == 1 || ReferenceEquals(_previousBrush.ImageSource, _current));
-            var fullFrameGesture = clip.StartsWith("gesture-", StringComparison.Ordinal) || _clip.StartsWith("gesture-", StringComparison.Ordinal);
-            _transitionFrom = state == PetState.Drag || samePose || fullFrameGesture ? null : Capture();
+            _transitionFrom = state == PetState.Drag || samePose || UsesFullFrames(clip) || UsesFullFrames(_clip)
+                ? null : Capture();
             _pickupOffset = state == PetState.Drag && _current is not null && clip.StartsWith("held-", StringComparison.Ordinal) &&
                 !_clip.StartsWith("pickup-", StringComparison.Ordinal)
                 ? new Point((_nape.X - HeldNape.X) / Width, (_nape.Y - HeldNape.Y) / Height) : default;
@@ -117,6 +117,11 @@ public sealed class PetVisual : FrameworkElement
             InvalidateVisual();
         }
     }
+
+    private static bool UsesFullFrames(string clip) =>
+        clip.StartsWith("gesture-", StringComparison.Ordinal) ||
+        clip.StartsWith("fall-roll-", StringComparison.Ordinal) ||
+        clip.StartsWith("fall-ready-", StringComparison.Ordinal);
 
     private static Point NapeFor(string clip, PetState state, double progress)
     {

@@ -228,6 +228,60 @@
       "mirror": true,
       "standingClip": null
     },
+    "fall-roll-left": {
+      "file": "actions/fall-roll.png",
+      "columns": 6,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "durations": [
+        51,
+        58,
+        68,
+        67,
+        62,
+        71,
+        66,
+        69,
+        69,
+        63,
+        73,
+        81,
+        91,
+        111
+      ],
+      "blendMilliseconds": 0,
+      "scale": 2,
+      "mirror": true,
+      "standingClip": null
+    },
+    "fall-ready-left": {
+      "file": "actions/jump.png",
+      "columns": 6,
+      "frames": [
+        31
+      ],
+      "durations": [
+        1000
+      ],
+      "blendMilliseconds": 0,
+      "scale": 2,
+      "mirror": true,
+      "standingClip": null
+    },
     "land-left": {
       "file": "actions/jump.png",
       "columns": 6,
@@ -1656,6 +1710,60 @@
         33,
         33,
         34
+      ],
+      "blendMilliseconds": 0,
+      "scale": 2,
+      "mirror": false,
+      "standingClip": null
+    },
+    "fall-roll-right": {
+      "file": "actions/fall-roll.png",
+      "columns": 6,
+      "frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "durations": [
+        51,
+        58,
+        68,
+        67,
+        62,
+        71,
+        66,
+        69,
+        69,
+        63,
+        73,
+        81,
+        91,
+        111
+      ],
+      "blendMilliseconds": 0,
+      "scale": 2,
+      "mirror": false,
+      "standingClip": null
+    },
+    "fall-ready-right": {
+      "file": "actions/jump.png",
+      "columns": 6,
+      "frames": [
+        31
+      ],
+      "durations": [
+        1000
       ],
       "blendMilliseconds": 0,
       "scale": 2,

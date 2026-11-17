@@ -9,6 +9,7 @@ public sealed partial class PetEngine
 {
     public const double WalkCycleSeconds = 1.2;
     internal const double PickupSeconds = .30;
+    private const double FallGravity = 1250, FallReleaseSeconds = .08;
     private const double TakeoffSeconds = .26, AirClipSeconds = .32, PounceWindup = .10;
     private const double FloorLieSeconds = 1.5, WindowLieSeconds = 1.05;
     private const double FloorRiseSeconds = 1.1, WindowRiseSeconds = .95;
@@ -33,7 +34,7 @@ public sealed partial class PetEngine
     private double _toyLifetime, _peekGround, _effectRemaining;
     private string? _angle;
     private string _fallAnimation = "idle-left";
-    private double _fallAge;
+    private double _fallAge, _fallRollDuration;
     private double _riseOffset;
     private Action? _afterRise;
     private double _lastInteraction, _nextAttention = 180;
@@ -60,7 +61,7 @@ public sealed partial class PetEngine
     public double BodyHeight => 128 * _settings.Scale;
     public Rect WorkArea => _surfaces.Desktop.WorkAreaAt(CenterX, FeetY);
     public bool Moving => State is PetState.Walk or PetState.Stalk or PetState.ApproachJump or PetState.Fall or PetState.Drag or PetState.Pounce or PetState.Jump;
-    public bool LoopAnimation => State == PetState.Fall && Age < .08 ? _fallLoop :
+    public bool LoopAnimation => State == PetState.Fall && Age < FallReleaseSeconds ? _fallLoop :
         State is PetState.Idle or PetState.Walk or PetState.Stalk or PetState.ApproachJump or PetState.Doze or PetState.Perch or PetState.Peek or PetState.Drag;
     public double RenderAge => State switch
     {
@@ -68,7 +69,8 @@ public sealed partial class PetEngine
         PetState.Stalk => _huntDistance / 42,
         PetState.Drag when _pickupFromStanding && Age >= PickupSeconds => Age - PickupSeconds,
         PetState.Rise => Age + _riseOffset,
-        PetState.Fall when Age < .08 => _fallAge,
+        PetState.Fall when Age < FallReleaseSeconds => _fallAge,
+        PetState.Fall when _fallRollDuration > 0 => (Age - FallReleaseSeconds) / _fallRollDuration,
         PetState.Jump when Age >= TakeoffSeconds => (Age - TakeoffSeconds) / _jumpDuration * AirClipSeconds,
         PetState.Land => Age / _actionDuration * .28,
         PetState.Pounce => Age < PounceWindup ? Age : PounceWindup + (Age - PounceWindup) / _pounceDuration * .28,
@@ -100,7 +102,9 @@ public sealed partial class PetEngine
         if (State is not (PetState.Fall or PetState.Jump)) FollowSupport();
         if (State == PetState.Fall)
         {
-            var previous = FeetY; _velocityY += 1250 * dt; FeetY += _velocityY * dt;
+            var previous = FeetY;
+            FeetY += (_velocityY + .5 * FallGravity * dt) * dt;
+            _velocityY += FallGravity * dt;
             if (Platforms.TryLand(_surfaces.Surfaces, CenterX, previous, FeetY, out var top)) LandAt(top, NeedsCushion(top-_fallStartY));
             else if (FeetY > WorkArea.Bottom) LandAt(WorkArea.Bottom, NeedsCushion(WorkArea.Bottom-_fallStartY));
             return;
@@ -377,6 +381,13 @@ public sealed partial class PetEngine
     {
         _fallAnimation = Animation; _fallAge = RenderAge; _fallLoop = LoopAnimation;
         FinishPeek(); _afterRise = null; _support = null; _velocityY = 0; _fallStartY = FeetY; SetState(PetState.Fall);
+        // Plan from the first surface below the cat, even if the desktop is much lower.
+        var bottom = WorkArea.Bottom;
+        var landing = Platforms.TryLand(_surfaces.Surfaces, CenterX, FeetY, bottom, out var top) ? top : bottom;
+        var height = landing - FeetY;
+        _fallRollDuration = height >= 180 * _settings.Scale
+            ? Math.Min(.42, Math.Sqrt(2 * height / FallGravity) - FallReleaseSeconds - .06)
+            : 0;
     }
     private void LandAt(double top, bool cushion, double duration = .28)
     {
@@ -527,7 +538,9 @@ public sealed partial class PetEngine
         PetState.Land => Facing < 0 ? "land-left" : "land-right",
         PetState.Jump when Age < TakeoffSeconds => Facing < 0 ? "takeoff-left" : "takeoff-right",
         PetState.Jump => Facing < 0 ? "air-left" : "air-right",
-        PetState.Fall when Age < .08 => _fallAnimation,
+        PetState.Fall when Age < FallReleaseSeconds => _fallAnimation,
+        PetState.Fall when _fallRollDuration > 0 && Age < FallReleaseSeconds + _fallRollDuration => "fall-roll" + Direction,
+        PetState.Fall when _fallRollDuration > 0 => "fall-ready" + Direction,
         PetState.Fall => Facing < 0 ? "fall-left" : "fall-right",
         PetState.Peek => "peek",
         PetState.Drag when _pickupFromStanding && Age < PickupSeconds => "pickup" + Direction,

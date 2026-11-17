@@ -18,6 +18,9 @@ internal static partial class Program
             Play("takeoff", "jump", [-1, ..Range(1, 8)], 260);
             Play("air", "jump", Range(8, 32), 320);
             Play("fall", "jump", Range(26, 31), 200);
+            // Timing follows the drawn poses, with no dissolve between silhouettes.
+            Add("fall-roll", "fall-roll", Range(0, 13), [51, 58, 68, 67, 62, 71, 66, 69, 69, 63, 73, 81, 91, 111]);
+            Add("fall-ready", "jump", [31], [1000]);
             Play("land", "jump", Range(32, 40), 280);
 
             Add("crouch", "hunt", [0], [1000]);

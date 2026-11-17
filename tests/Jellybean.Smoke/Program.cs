@@ -85,6 +85,11 @@ internal static class Program
             Check(GameDetector.IsProductivityApp("wps") && GameDetector.IsProductivityApp("wpp") && GameDetector.IsProductivityApp("et"),"WPS full-screen document modes are excluded from game hiding");
             fixture.WindowStyle=WindowStyle.SingleBorderWindow; Place(area.Left+180,area.Top+250,460,220);
             edge=surfaces.Surfaces.First(s=>s.Window==handle);
+            engine.BeginDrag(); engine.DragTo(edge.Left+210,edge.Top-65); engine.EndDrag();
+            var rolledAboveWindow=false;
+            for(var i=0;i<60 && engine.State==PetState.Fall;i++)
+            { engine.Tick(1.0/60); rolledAboveWindow |= engine.Animation.StartsWith("fall-roll-"); }
+            Check(!rolledAboveWindow && engine.Support?.Window==handle,"a window just below the cat prevents a roll even far above the desktop");
             engine.BeginDrag(); engine.DragTo(edge.Left+210,edge.Top); engine.EndDrag();
             fixture.Close(); fixture=null; engine.Tick(.06);
             Check(engine.Support?.Window!=handle,"closing a support window removes the attachment");
@@ -177,11 +182,24 @@ internal static class Program
         var tail=sprites.HitMask(sprites.Frame("window-rest-left",1.5));
         Check(tail.Skip(SpriteCatalog.Width*(SpriteCatalog.Foot+5)).Any(a=>a>100),"window resting pose extends its tail below the support line");
         engine.BeginDrag(); engine.DragTo(area.Left+area.Width/2,area.Bottom-60); engine.EndDrag();
-        for(var i=0;i<180 && engine.State==PetState.Fall;i++) engine.Tick(1.0/60);
-        Check(engine.State==PetState.Idle,"small drops finish normally without a deep landing animation");
+        var rolledLow=false;
+        for(var i=0;i<180 && engine.State==PetState.Fall;i++)
+        { rolledLow |= engine.Animation.StartsWith("fall-roll-"); engine.Tick(1.0/60); }
+        Check(!rolledLow && engine.State==PetState.Idle,"small drops finish normally without a roll or a deep landing animation");
         engine.BeginDrag(); engine.DragTo(area.Left+area.Width/2,area.Bottom-180); engine.EndDrag();
-        for(var i=0;i<180 && engine.State==PetState.Fall;i++) engine.Tick(1.0/60);
-        Check(engine.State==PetState.Land,"a high fall uses the brief crouched landing"); engine.Tick(.3);
+        var rollFrames=new HashSet<BitmapSource>(); var braced=false; var restarted=false;
+        for(var i=0;i<180 && engine.State==PetState.Fall;i++)
+        {
+            if(engine.Animation.StartsWith("fall-roll-"))
+            {
+                restarted |= braced;
+                rollFrames.Add(sprites.Frame(engine.Animation,engine.RenderAge,engine.LoopAnimation));
+            }
+            braced |= engine.Animation.StartsWith("fall-ready-");
+            engine.Tick(1.0/60);
+        }
+        Check(rollFrames.Count>=10 && braced && !restarted && engine.State==PetState.Land,
+            "a high fall turns once and reaches the paws-down pose before the cushioned landing"); engine.Tick(.3);
         engine.ToyPosition=new Point(engine.CenterX+260,engine.FeetY-6); engine.ToggleToy();
         Check(engine.State==PetState.HuntAim,"wand play reacts immediately with a low aiming posture");
         var observedStalk=false; var stalkDistance=0.0; var burstSpeed=0.0; var previousX=engine.CenterX;
