@@ -26,6 +26,7 @@ internal static class MotionPreview
         void PlaceActor(PetEngine actor,double x,double y) { actor.BeginDrag(); actor.DragTo(x,y); actor.EndDrag(); actor.Idle(); }
         var actors=Enumerable.Range(0,4).Select(_=>Actor(plane)).ToArray();
         foreach(var actor in actors) PlaceActor(actor,area.Left+area.Width/2,area.Bottom);
+            var highDrop=plane.Desktop.MonitorAt(actors[1].CenterX,actors[1].FeetY).Height/2+20;
         var starts=actors.Select(e=>e.CenterX).ToArray();
         var handles=new HashSet<nint>(); var fixtures=new List<Window>();
         try
@@ -52,7 +53,7 @@ internal static class MotionPreview
                 if(t>=.4&&!jump) { jumper.JumpToWindow(false); jump=true; }
                 if(t>=5.2&&!returnJump) { jumper.JumpToWindow(false); returnJump=true; }
                 if(t>=.5&&!low) { actors[1].BeginDrag(); actors[1].DragTo(starts[1],area.Bottom-60); actors[1].EndDrag(); low=true; }
-                if(t>=3.0&&!liftForDrop) { actors[1].BeginDrag(); actors[1].DragTo(starts[1],area.Bottom-180); liftForDrop=true; }
+                if(t>=3.0&&!liftForDrop) { actors[1].BeginDrag(); actors[1].DragTo(starts[1],area.Bottom-highDrop); liftForDrop=true; }
                 if(t>=3.5&&!high) { actors[1].EndDrag(); high=true; }
                 if(t>=.4&&!held) { actors[2].BeginDrag(); held=true; }
                 if(held&&!released) actors[2].DragTo(starts[2]+Math.Sin(t*1.7)*48,area.Bottom-55+Math.Sin(t*2)*7);
@@ -86,7 +87,7 @@ internal static class MotionPreview
                             }
                             center=x+32+(jumper.CenterX-area.Left-100)*scale; foot=y+227+(jumper.FeetY-area.Top-310)*scale;
                         }
-                        if(i==2) { scale=.68; foot+= (actors[1].FeetY-area.Bottom)*scale; Text(dc,t<3.5?"低处放下":"高处落下",x+25,y+55,12); }
+                        if(i==2) { scale=Math.Min(.68,180/highDrop); foot+= (actors[1].FeetY-area.Bottom)*scale; Text(dc,t<3.0?"低处放下":"超过半屏高度落下",x+25,y+55,12); }
                         if(i==3) { center+=(actors[2].CenterX-starts[2]); foot+=(actors[2].FeetY-area.Bottom); }
                         if(i==4)
                         {

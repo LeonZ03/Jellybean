@@ -385,7 +385,7 @@ public sealed partial class PetEngine
         var bottom = WorkArea.Bottom;
         var landing = Platforms.TryLand(_surfaces.Surfaces, CenterX, FeetY, bottom, out var top) ? top : bottom;
         var height = landing - FeetY;
-        _fallRollDuration = height >= 180 * _settings.Scale
+        _fallRollDuration = height > _surfaces.Desktop.MonitorAt(CenterX, FeetY).Height / 2
             ? Math.Min(.42, Math.Sqrt(2 * height / FallGravity) - FallReleaseSeconds - .06)
             : 0;
     }

@@ -186,7 +186,17 @@ internal static class Program
         for(var i=0;i<180 && engine.State==PetState.Fall;i++)
         { rolledLow |= engine.Animation.StartsWith("fall-roll-"); engine.Tick(1.0/60); }
         Check(!rolledLow && engine.State==PetState.Idle,"small drops finish normally without a roll or a deep landing animation");
-        engine.BeginDrag(); engine.DragTo(area.Left+area.Width/2,area.Bottom-180); engine.EndDrag();
+        var halfScreen=surfaces.Desktop.MonitorAt(engine.CenterX,engine.FeetY).Height/2;
+        foreach(var height in new[]{halfScreen-1,halfScreen})
+        {
+            engine.BeginDrag(); engine.DragTo(area.Left+area.Width/2,area.Bottom-height); engine.EndDrag();
+            var rolled=false;
+            for(var i=0;i<180 && engine.State==PetState.Fall;i++)
+            { rolled |= engine.Animation.StartsWith("fall-roll-"); engine.Tick(1.0/60); }
+            Check(!rolled && engine.State==PetState.Land,"drops at or below half the current screen height do not roll");
+            engine.Tick(.3);
+        }
+        engine.BeginDrag(); engine.DragTo(area.Left+area.Width/2,area.Bottom-halfScreen-1); engine.EndDrag();
         var rollFrames=new HashSet<BitmapSource>(); var braced=false; var restarted=false;
         for(var i=0;i<180 && engine.State==PetState.Fall;i++)
         {
@@ -199,7 +209,7 @@ internal static class Program
             engine.Tick(1.0/60);
         }
         Check(rollFrames.Count>=10 && braced && !restarted && engine.State==PetState.Land,
-            "a high fall turns once and reaches the paws-down pose before the cushioned landing"); engine.Tick(.3);
+            "a fall exceeding half the screen turns once and reaches the paws-down pose before landing"); engine.Tick(.3);
         engine.ToyPosition=new Point(engine.CenterX+260,engine.FeetY-6); engine.ToggleToy();
         Check(engine.State==PetState.HuntAim,"wand play reacts immediately with a low aiming posture");
         var observedStalk=false; var stalkDistance=0.0; var burstSpeed=0.0; var previousX=engine.CenterX;

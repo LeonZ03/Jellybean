@@ -7,11 +7,19 @@ namespace Jellybean.Engine;
 public sealed class DesktopGeometry
 {
     public IReadOnlyList<Rect> WorkAreas { get; }
+    private readonly IReadOnlyList<Rect> _monitors;
 
-    public DesktopGeometry(IReadOnlyList<Rect> workAreas) => WorkAreas = workAreas;
+    public DesktopGeometry(IReadOnlyList<Rect> workAreas, IReadOnlyList<Rect> monitors)
+    { WorkAreas = workAreas; _monitors = monitors; }
 
-    public static DesktopGeometry Capture(double scale) => new(Win32.GetMonitors()
-        .Select(m => new Rect(m.Work.Left / scale, m.Work.Top / scale, m.Work.Width / scale, m.Work.Height / scale)).ToArray());
+    public static DesktopGeometry Capture(double scale)
+    {
+        var monitors = Win32.GetMonitors();
+        Rect Logical(Win32.RECT r) => new(r.Left / scale, r.Top / scale, r.Width / scale, r.Height / scale);
+        return new(monitors.Select(m => Logical(m.Work)).ToArray(), monitors.Select(m => Logical(m.Monitor)).ToArray());
+    }
+
+    public Rect MonitorAt(double x, double y) => _monitors.MinBy(a => DistanceSquared(a, x, y));
 
     public Rect WorkAreaAt(double x, double y)
     {
