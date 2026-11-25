@@ -110,7 +110,7 @@ internal static class Program
             foreach(var clip in new[]{"front","walk-left","walk-right","pounce-left","pounce-right","doze-left","pet","perch","stretch-right","rear"})
             {
                 var frame=sprites.Frame(clip,.8);
-                var scale=clip is "front" or "walk-left" or "walk-right" or "rear" ? 1 : 2;
+                var scale=clip is "front" or "rear" ? 1 : 2;
                 Check(frame.PixelWidth==SpriteCatalog.Width*scale && frame.PixelHeight==SpriteCatalog.Height*scale && frame.IsFrozen,
                     $"{clip} atlas decodes at its expected resolution");
                 var mask=sprites.HitMask(frame);

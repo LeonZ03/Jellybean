@@ -12,7 +12,6 @@ internal static partial class Program
 {
     private const int Width=240, Height=240, Foot=164, Anchor=120;
     private const double WalkStride=53.16; // 44.3 logical pixels/second for the 1.2-second source cycle.
-    private static readonly int[] WalkDurations=Enumerable.Repeat(100,12).ToArray();
     private static readonly Dictionary<string,object> Clips=new();
     private static readonly List<object> Calibration=new();
     private static string Root="", Output="";
@@ -24,26 +23,14 @@ internal static partial class Program
         if(args.Contains("--walk-v4-prepare")) { PrepareWalkV4(); return; }
         if(args.Contains("--walk-v4-preview")) { PreviewWalkV4(); return; }
         if(args.Contains("--walk-review")) { ExportWalkReview(); return; }
-        PackApprovedWalk("walk-left","design/walk-transfer/atlas-fur-50-left.png");
-        PackApprovedWalk("walk-right","design/walk-transfer/atlas-fur-50.png");
-        var body=Load("assets/animations/v2/turnaround.png");
-        var views=new[]
+        var views=Load("src/Jellybean/Assets/actions/photo-views.png");
+        var names=new[]{ "front", "front-three-quarter", "left-view", "right-view", "rear", "rear-three-quarter" };
+        for (var i=0;i<names.Length;i++)
         {
-            ("front",new Int32Rect(130,0,230,486)), ("front-three-quarter",new Int32Rect(460,0,443,486)),
-            ("rear",new Int32Rect(620,488,240,536)), ("rear-three-quarter",new Int32Rect(965,488,500,536))
-        };
-        foreach (var (name,region) in views)
-        {
-            var view=Isolate(new CroppedBitmap(body,region));
-            var b=Bounds(view); var s=124/b.Height;
-            Save(name,new[]{Draw(CoatPalette.MatchWalk(view),(b.Left+b.Right)/2,b.Bottom,s)},new[]{1000});
+            var view=new CroppedBitmap(views,new Int32Rect(i*Width*2,0,Width*2,Height*2));
+            Save(names[i],new[]{Draw(view,Anchor*2,Foot*2,.5)},new[]{1000});
         }
         AddApprovedActions();
-        foreach(var direction in new[]{"left","right"})
-        {
-            Alias("idle-"+direction,"walk-"+direction,new[]{0},new[]{1000});
-            Alias(direction+"-view","walk-"+direction,new[]{0},new[]{1000});
-        }
         var options=new JsonSerializerOptions{WriteIndented=true};
         File.WriteAllText(Path.Combine(Output,"animations.json"),JsonSerializer.Serialize(new{width=Width,height=Height,anchor=Anchor,foot=Foot,walkStrideLeft=WalkStride,walkStrideRight=WalkStride,clips=Clips},options));
         Directory.CreateDirectory(Path.Combine(Root,"artifacts"));
@@ -51,22 +38,6 @@ internal static partial class Program
         ShaderCompiler.Compile(Path.Combine(Root,"src/Jellybean/Shaders/PetMotion.hlsl"),Path.Combine(Output,"pet-motion.ps"));
         MakeIcon(Load("src/Jellybean/Assets/front.png"));
         Console.WriteLine($"Packed {Clips.Count} clips; one anatomical scale per sheet, feet fixed at {Foot}.");
-    }
-
-    private static void PackApprovedWalk(string name,string path)
-    {
-        const int columns=4, cellWidth=480, cellHeight=352;
-        var source=Load(path);
-        if(source.PixelWidth!=columns*cellWidth || source.PixelHeight!=3*cellHeight)
-            throw new InvalidDataException($"Unexpected approved walk atlas size: {path}");
-        var frames=Enumerable.Range(0,WalkDurations.Length).Select(i =>
-        {
-            var rect=new Int32Rect(i%columns*cellWidth,i/columns*cellHeight,cellWidth,cellHeight);
-            // Use the same anchor and floor for every frame so the planted paws keep their motion.
-            return Draw(new CroppedBitmap(source,rect),240,314,.5);
-        }).ToArray();
-        Save(name,frames,WalkDurations,blendMilliseconds:0);
-        Calibration.Add(new { name, scale=.5, referenceHeight=124 });
     }
 
     private static BitmapSource Load(string path)
@@ -198,15 +169,6 @@ internal static partial class Program
         Clips[name]=blendMilliseconds is int blend
             ? new {file=name+".png",columns,frames=indices,durations,blendMilliseconds=blend}
             : new {file=name+".png",columns,frames=indices,durations};
-    }
-    private static void Alias(string name,string source,int[] frames,int[] durations)
-    {
-        var json=JsonSerializer.SerializeToElement(Clips[source]);
-        var file=json.GetProperty("file").GetString();
-        var columns=json.GetProperty("columns").GetInt32();
-        Clips[name]=json.TryGetProperty("blendMilliseconds",out var blend)
-            ? new {file,columns,frames,durations,blendMilliseconds=blend.GetInt32()}
-            : new {file,columns,frames,durations};
     }
     private static void MakeIcon(BitmapSource frame)
     {
