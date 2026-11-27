@@ -333,7 +333,7 @@
       "standingClip": null
     },
     "pickup-left": {
-      "file": "actions/pickup-right.png",
+      "file": "actions/pickup-facing.png",
       "columns": 6,
       "frames": [
         -1,
@@ -341,33 +341,31 @@
         1,
         2,
         3,
-        4
+        4,
+        5
       ],
       "durations": [
-        35,
+        24,
+        44,
         50,
-        56,
-        56,
+        54,
         58,
-        45
+        48,
+        22
       ],
       "blendMilliseconds": 0,
       "scale": 2,
       "mirror": true,
       "standingClip": "idle-left"
     },
-    "held-left": {
-      "file": "actions/held.png",
+    "held-front-left": {
+      "file": "actions/pickup-facing.png",
       "columns": 6,
       "frames": [
-        0,
-        1,
-        0
+        5
       ],
       "durations": [
-        1180,
-        240,
-        1180
+        1000
       ],
       "blendMilliseconds": 0,
       "scale": 2,
@@ -1019,7 +1017,7 @@
       "standingClip": null
     },
     "pickup-right": {
-      "file": "actions/pickup-right.png",
+      "file": "actions/pickup-facing.png",
       "columns": 6,
       "frames": [
         -1,
@@ -1027,33 +1025,31 @@
         1,
         2,
         3,
-        4
+        4,
+        5
       ],
       "durations": [
-        35,
+        24,
+        44,
         50,
-        56,
-        56,
+        54,
         58,
-        45
+        48,
+        22
       ],
       "blendMilliseconds": 0,
       "scale": 2,
       "mirror": false,
       "standingClip": "idle-right"
     },
-    "held-right": {
-      "file": "actions/held.png",
+    "held-front-right": {
+      "file": "actions/pickup-facing.png",
       "columns": 6,
       "frames": [
-        0,
-        1,
-        0
+        5
       ],
       "durations": [
-        1180,
-        240,
-        1180
+        1000
       ],
       "blendMilliseconds": 0,
       "scale": 2,

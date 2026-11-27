@@ -87,6 +87,11 @@ internal sealed class PetLifeMotion
             eyes = new Point(112 / size, 128 / size);
             eyeHeight = 75;
         }
+        else if (clip is "held-front-left" or "held-front-right")
+        {
+            eyes = new Point(X(113) / size, X(129) / size);
+            eyeHeight = 43;
+        }
         else if (clip == "front-three-quarter")
         {
             eyes = new Point(75 / size, 90 / size);

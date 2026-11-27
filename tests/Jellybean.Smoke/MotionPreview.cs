@@ -43,7 +43,7 @@ internal static class MotionPreview
             var jumper=Actor(windows); PlaceActor(jumper,support.Left+support.Width/2,support.Top);
             var views=Enumerable.Range(0,6).Select(_=>new PetVisual()).ToArray();
             foreach(var view in views) { view.Measure(new Size(240,240)); view.Arrange(new Rect(0,0,240,240)); view.UpdateLayout(); }
-            var labels=new[]{"糖豆走路","走到边缘 → 提速 → 跳窗","低处直接落地 · 高处先翻身","拎起后自然下垂 · 跟随惯性轻摆","观察 → 慢慢接近 → 扑击","淡黄色气泡 · 按文本调整大小"};
+            var labels=new[]{"糖豆走路","走到边缘 → 提速 → 跳窗","低处直接落地 · 高处先翻身","拎起后转向你 · 跟随惯性轻摆","观察 → 慢慢接近 → 扑击","淡黄色气泡 · 按文本调整大小"};
             var bubble=new SpeechBubble(); bool walk=false,jump=false,returnJump=false,low=false,liftForDrop=false,high=false,held=false,released=false,hunt=false;
             const int fps=60;
             for(var n=0;n<fps*9;n++)
@@ -151,7 +151,7 @@ internal static class MotionPreview
 
         var held = new PetVisual();
         held.Measure(new Size(240,240)); held.Arrange(new Rect(0,0,240,240));
-        held.Present(sprites.Frame("held-right",0),"held-right",0,PetState.Drag); held.UpdateLayout();
+        held.Present(sprites.Frame("held-front-right",0),"held-front-right",0,PetState.Drag); held.UpdateLayout();
         var neutral = Bytes(held.Capture()!);
         ((PetMotionEffect)held.Effect).Sway = new Point(-7,0);
         var trailing = Bytes(held.Capture()!);

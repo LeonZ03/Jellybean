@@ -140,6 +140,20 @@ internal static class Program
     {
         var engine=new PetEngine(surfaces,new UserSettings{Autonomous=false},sprites.WalkStrideLeft,sprites.WalkStrideRight);
         engine.BeginDrag(); engine.DragTo(area.Left+area.Width/2,area.Bottom); engine.EndDrag(); engine.Idle();
+        var facesViewer = true;
+        foreach (var direction in new[] { "left", "right" })
+        {
+            engine.ShowAngle(direction + "-view");
+            engine.BeginDrag();
+            engine.Tick(.29);
+            var front = sprites.Frame(engine.Animation,engine.RenderAge,engine.LoopAnimation);
+            facesViewer &= engine.Animation == "pickup-" + direction;
+            engine.Tick(.02);
+            facesViewer &= engine.Animation == "held-front-" + direction &&
+                ReferenceEquals(front, sprites.Frame(engine.Animation,engine.RenderAge,engine.LoopAnimation));
+            engine.EndDrag();
+        }
+        Check(facesViewer,"both side pickups reach front-facing hanging without a pose change at the handoff");
         engine.Walk(); var x=engine.CenterX;
         for(var i=0;i<8;i++) engine.Tick(.03);
         Check(Math.Abs(Math.Abs(engine.CenterX-x)-engine.RenderAge/PetEngine.WalkCycleSeconds*engine.WalkStride)<.01,"walk phase follows real distance through acceleration");
@@ -148,7 +162,7 @@ internal static class Program
         Check(engine.State==PetState.Drag && engine.Animation.StartsWith("pickup-") &&
             pickup.Blend==0 && ReferenceEquals(pickup.From,pickup.To),"the pickup midpoint is a single authored pose");
         engine.Tick(.16);
-        Check(engine.State==PetState.Drag && engine.Animation.StartsWith("held-") && engine.RenderAge<.03,
+        Check(engine.State==PetState.Drag && engine.Animation.StartsWith("held-front-") && engine.RenderAge<.03,
             "the pickup enters the hanging loop from its first pose");
         const double tick=1.0/60;
         var grip=new Point(engine.CenterX,engine.FeetY);

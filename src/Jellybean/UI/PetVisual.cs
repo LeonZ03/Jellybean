@@ -119,6 +119,7 @@ public sealed class PetVisual : FrameworkElement
     }
 
     private static bool UsesFullFrames(string clip) =>
+        clip.StartsWith("held-front-", StringComparison.Ordinal) ||
         clip.StartsWith("gesture-", StringComparison.Ordinal) ||
         clip.StartsWith("fall-roll-", StringComparison.Ordinal) ||
         clip.StartsWith("fall-ready-", StringComparison.Ordinal);

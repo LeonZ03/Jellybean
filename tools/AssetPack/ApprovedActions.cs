@@ -30,8 +30,8 @@ internal static partial class Program
             Play("stalk", "hunt", [0, 1, 2, 3, 2, 1], 800);
             Add("pounce", "hunt", [0, 1, 4, 5, 6, 7], [50, 50, 48, 80, 82, 70]);
             Add("catch", "hunt", [7], [180]);
-            Add("pickup", "pickup-right", [-1, 0, 1, 2, 3, 4], [35, 50, 56, 56, 58, 45]);
-            Add("held", "held", [0, 1, 0], [1180, 240, 1180]);
+            Add("pickup", "pickup-facing", [-1, 0, 1, 2, 3, 4, 5], [24, 44, 50, 54, 58, 48, 22]);
+            Add("held-front", "pickup-facing", [5], [1000]);
 
             Add("stretch", "stretch", [-1, 2, 0, 3, 1, 3, 0, 2, -1], [380, 170, 180, 180, 850, 180, 180, 180, 500]);
             Add("lie", "sleep", [-1, 4, 5, 0, 6, 1, 7, 2, 3], [190, 128, 166, 192, 155, 162, 172, 182, 153]);

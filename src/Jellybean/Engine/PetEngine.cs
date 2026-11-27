@@ -544,7 +544,7 @@ public sealed partial class PetEngine
         PetState.Fall => Facing < 0 ? "fall-left" : "fall-right",
         PetState.Peek => "peek",
         PetState.Drag when _pickupFromStanding && Age < PickupSeconds => "pickup" + Direction,
-        PetState.Drag => "held" + Direction,
+        PetState.Drag => "held-front" + Direction,
         _ => Facing < 0 ? "idle-left" : "idle-right"
     });
 }
